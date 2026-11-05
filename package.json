@@ -1,0 +1,57 @@
+{
+  "name": "credo-ts-openbao",
+  "version": "0.1.0",
+  "description": "OpenBao Transit key management backend for Credo (KMS plug-in)",
+  "type": "module",
+  "license": "Apache-2.0",
+  "codeowners": [
+    "AyanWorks"
+  ],
+  "main": "./build/index.js",
+  "types": "./build/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./build/index.d.ts",
+      "import": "./build/index.js"
+    }
+  },
+  "files": [
+    "build"
+  ],
+  "scripts": {
+    "fmt": "bun fmt --no-script src test scripts package.json bunfig.toml",
+    "fmt:check": "bun fmt --check --no-script src test scripts package.json bunfig.toml",
+    "list": "bun pm ls",
+    "build": "tsc -p tsconfig.build.json",
+    "prebuild": "bun run clean",
+    "clean": "rm -rf build",
+    "typecheck": "tsc --noEmit",
+    "check": "bun check --no-script",
+    "test": "bun test",
+    "test:watch": "bun test --watch",
+    "test:coverage": "bun test --coverage",
+    "live-check": "bun run scripts/live-check.ts",
+    "outdated": "bun outdated",
+    "audit": "bun audit",
+    "pack": "bun pm pack --dry-run",
+    "ci": "bun run fmt:check && bun run check && bun run test && bun run build",
+    "prepublishOnly": "bun run build"
+  },
+  "peerDependencies": {
+    "@credo-ts/core": "^0.7.0"
+  },
+  "devDependencies": {
+    "@credo-ts/core": "0.7.4",
+    "@credo-ts/drizzle-storage": "^0.7.4",
+    "@credo-ts/node": "0.7.4",
+    "@types/better-sqlite3": "^9.6.0",
+    "@types/node": "^22.0.0",
+    "better-sqlite3": "^13.0.3",
+    "drizzle-orm": "^0.44.7",
+    "tsx": "^4.19.0",
+    "typescript": "^5.7.0"
+  },
+  "dependencies": {
+    "@noble/curves": "^2.4.0"
+  }
+}
