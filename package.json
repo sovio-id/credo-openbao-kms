@@ -65,11 +65,11 @@
     "@credo-ts/drizzle-storage": "^0.7.4",
     "@credo-ts/node": "0.7.4",
     "@types/better-sqlite3": "^9.6.0",
-    "@types/node": "^22.0.0",
+    "@types/node": "^26.6.6",
     "better-sqlite3": "^13.0.3",
     "drizzle-orm": "^0.44.7",
     "tsx": "^4.19.0",
-    "typescript": "^5.7.0"
+    "typescript": "^7.0.2"
   },
   "dependencies": {
     "@noble/curves": "^2.4.0"

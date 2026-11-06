@@ -18,7 +18,24 @@
           }
         }
       ],
-      "purl": "pkg:npm/%40credebl/credo-ts-openbao@0.2.0",
+      "purl": "pkg:npm/%40credebl/credo-ts-openbao@0.2.0?vcs_url=git%2Bhttps%3A%2F%2Fgithub.com%2Fsovio-id%2Fcredo-ts-openbao.git",
+      "externalReferences": [
+        {
+          "url": "https://github.com/sovio-id/credo-ts-openbao/issues",
+          "type": "issue-tracker",
+          "comment": "as detected from PackageJson property \"bugs.url\""
+        },
+        {
+          "url": "git+https://github.com/sovio-id/credo-ts-openbao.git",
+          "type": "vcs",
+          "comment": "as detected from PackageJson property \"repository.url\""
+        },
+        {
+          "url": "https://github.com/sovio-id/credo-ts-openbao#readme",
+          "type": "website",
+          "comment": "as detected from PackageJson property \"homepage\""
+        }
+      ],
       "properties": [
         {
           "name": "cdx:npm:package:path",
@@ -45,7 +62,7 @@
         "phase": "build"
       }
     ],
-    "timestamp": "2026-11-06T05:57:37.000Z",
+    "timestamp": "2026-11-06T14:07:26.000Z",
     "properties": [
       {
         "name": "bom:generator",
@@ -57,7 +74,7 @@
       },
       {
         "name": "bom:git:commit",
-        "value": "1dacdda3a0a0f27d4155cebe538f6aaa1794ccb4"
+        "value": "b7510137ea358b8c1564c404dd04aaefec08148a"
       },
       {
         "name": "bom:git:repository",
@@ -65,7 +82,7 @@
       },
       {
         "name": "bom:package-lock:sha256",
-        "value": "a3516cd881add929ad1b2837ecd13a824e3f742fcbae1332435916102a3f12f8"
+        "value": "23ab2671a5cdc7b32abcd7d4116f522f61d440d75057de69a6d1a1e887894253"
       },
       {
         "name": "bom:crypto-inventory:sha256",
@@ -2046,5 +2063,5 @@
       "url": "https://github.com/sovio-id/credo-ts-openbao"
     }
   ],
-  "serialNumber": "urn:uuid:ec239745-5157-5e62-b95f-e5c93d7a911e"
+  "serialNumber": "urn:uuid:1bb2bf55-d64e-5ee1-b3af-9f239601c2e2"
 }

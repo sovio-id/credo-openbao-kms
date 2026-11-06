@@ -13,6 +13,12 @@ updates:
       - dependencies
     commit-message:
       prefix: 'chore(deps)'
+    # @credo-ts/drizzle-storage still peers on drizzle-orm ^0.44.6, so a 0.45
+    # bump cannot be installed without ignoring peer dependencies.
+    ignore:
+      - dependency-name: 'drizzle-orm'
+        versions:
+          - '>=0.45.0'
     groups:
       credo:
         patterns:

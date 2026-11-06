@@ -47,14 +47,14 @@ jobs:
       contents: write # refresh the committed BOMs on main
     steps:
       - name: Check out the repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           # The BOM timestamp is derived from the last commit that changed an
           # input, which needs history rather than a shallow clone.
           fetch-depth: 0
 
       - name: Set up Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v7
         with:
           node-version: 22
           cache: npm
@@ -128,7 +128,7 @@ jobs:
           } >> "$GITHUB_STEP_SUMMARY"
 
       - name: Upload SBOM and CBOM
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: bom
           path: |
@@ -150,13 +150,13 @@ jobs:
       attestations: write
     steps:
       - name: Download the generated BOMs
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: bom
           path: sbom
 
       - name: Attest the SBOM and CBOM
-        uses: actions/attest-build-provenance@v2
+        uses: actions/attest-build-provenance@v4
         with:
           subject-path: sbom/*.cdx.json
 
@@ -173,7 +173,7 @@ jobs:
       packages: write # optional GHCR publication
     steps:
       - name: Download the generated BOMs
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: bom
           path: sbom
