@@ -1,0 +1,504 @@
+{
+  "version": 1,
+  "description": "Cryptographic assets used by credo-ts-openbao. scripts/generate-cbom.mjs turns this inventory into a CycloneDX 1.6 CBOM and verifies that every 'detect' pattern still exists in the source.",
+  "providers": {
+    "openbao": {
+      "type": "application",
+      "name": "OpenBao (Transit and KV v2)",
+      "version": "2.7.2",
+      "description": "OpenBao server providing the Transit secrets engine and the KV v2 fallback mount used by this package. Version 2.7.2 is the version verified by the live check.",
+      "externalReferences": [
+        {
+          "type": "website",
+          "url": "https://openbao.org"
+        },
+        {
+          "type": "documentation",
+          "url": "https://openbao.org/docs/secrets/transit/"
+        }
+      ]
+    },
+    "node-crypto": {
+      "type": "library",
+      "name": "Node.js crypto (OpenSSL)",
+      "version": "Node.js >=22",
+      "description": "Node.js built-in crypto module backed by the bundled OpenSSL. Used for key generation, verification, PKCS#8/JWK conversion, AES-ECB (inside AES-KWP), RSA-OAEP and hashing.",
+      "externalReferences": [
+        {
+          "type": "documentation",
+          "url": "https://nodejs.org/api/crypto.html"
+        }
+      ]
+    },
+    "noble-curves": {
+      "type": "library",
+      "name": "@noble/curves",
+      "fromSbom": "@noble/curves",
+      "description": "Pure-JavaScript secp256k1 implementation used for key generation, signing and verification when the runtime's OpenSSL build does not support the curve."
+    }
+  },
+  "dependencyProviders": {
+    "@noble/curves": "noble-curves"
+  },
+  "ignoredDependencies": {},
+  "ignoredLiterals": ["aes128-gcm96", "aes256-gcm96", "chacha20-poly1305", "hmac", "SHA1", "SHA224"],
+  "assets": [
+    {
+      "id": "ed25519",
+      "name": "Ed25519",
+      "description": "Edwards-curve signature algorithm used for EdDSA keys and DID documents. Keys are generated and used inside OpenBao Transit; signatures are verified locally with node:crypto.",
+      "assetType": "algorithm",
+      "oid": "1.3.101.112",
+      "algorithmProperties": {
+        "primitive": "signature",
+        "parameterSetIdentifier": "Ed25519",
+        "curve": "Ed25519",
+        "executionEnvironment": "software-plain-ram",
+        "implementationPlatform": "generic",
+        "certificationLevel": ["none"],
+        "cryptoFunctions": ["keygen", "sign", "verify"],
+        "classicalSecurityLevel": 128
+      },
+      "providers": ["openbao", "node-crypto"],
+      "detect": ["\\bed25519\\b", "\\bEdDSA\\b"]
+    },
+    {
+      "id": "ecdsa-p256",
+      "name": "ECDSA P-256",
+      "description": "NIST P-256 ECDSA signatures used for ES256 and DID keys. Generated and used inside OpenBao Transit; signatures are verified locally with node:crypto.",
+      "assetType": "algorithm",
+      "oid": "1.2.840.10045.3.1.7",
+      "algorithmProperties": {
+        "primitive": "signature",
+        "parameterSetIdentifier": "P-256",
+        "curve": "P-256",
+        "executionEnvironment": "software-plain-ram",
+        "implementationPlatform": "generic",
+        "certificationLevel": ["none"],
+        "cryptoFunctions": ["keygen", "sign", "verify"],
+        "classicalSecurityLevel": 128
+      },
+      "providers": ["openbao", "node-crypto"],
+      "detect": ["\\becdsa-p256\\b", "\\bP-256\\b", "\\bES256\\b"]
+    },
+    {
+      "id": "ecdsa-p384",
+      "name": "ECDSA P-384",
+      "description": "NIST P-384 ECDSA signatures used for ES384 and DID keys. Generated and used inside OpenBao Transit; signatures are verified locally with node:crypto.",
+      "assetType": "algorithm",
+      "oid": "1.3.132.0.34",
+      "algorithmProperties": {
+        "primitive": "signature",
+        "parameterSetIdentifier": "P-384",
+        "curve": "P-384",
+        "executionEnvironment": "software-plain-ram",
+        "implementationPlatform": "generic",
+        "certificationLevel": ["none"],
+        "cryptoFunctions": ["keygen", "sign", "verify"],
+        "classicalSecurityLevel": 192
+      },
+      "providers": ["openbao", "node-crypto"],
+      "detect": ["\\becdsa-p384\\b", "\\bP-384\\b", "\\bES384\\b"]
+    },
+    {
+      "id": "ecdsa-p521",
+      "name": "ECDSA P-521",
+      "description": "NIST P-521 ECDSA signatures used for ES512 and DID keys. Generated and used inside OpenBao Transit; signatures are verified locally with node:crypto.",
+      "assetType": "algorithm",
+      "oid": "1.3.132.0.35",
+      "algorithmProperties": {
+        "primitive": "signature",
+        "parameterSetIdentifier": "P-521",
+        "curve": "P-521",
+        "executionEnvironment": "software-plain-ram",
+        "implementationPlatform": "generic",
+        "certificationLevel": ["none"],
+        "cryptoFunctions": ["keygen", "sign", "verify"],
+        "classicalSecurityLevel": 256
+      },
+      "providers": ["openbao", "node-crypto"],
+      "detect": ["\\becdsa-p521\\b", "\\bP-521\\b", "\\bES512\\b"]
+    },
+    {
+      "id": "secp256k1",
+      "name": "secp256k1 ECDSA",
+      "description": "secp256k1 (ES256K) signatures for did:key, did:jwk and did:peer. Transit cannot represent this curve, so keys are stored in OpenBao KV v2 and signed in-process with @noble/curves.",
+      "assetType": "algorithm",
+      "oid": "1.3.132.0.10",
+      "algorithmProperties": {
+        "primitive": "signature",
+        "parameterSetIdentifier": "secp256k1",
+        "curve": "secp256k1",
+        "executionEnvironment": "software-plain-ram",
+        "implementationPlatform": "generic",
+        "certificationLevel": ["none"],
+        "cryptoFunctions": ["keygen", "sign", "verify"],
+        "classicalSecurityLevel": 128
+      },
+      "providers": ["noble-curves"],
+      "detect": ["\\bsecp256k1\\b", "\\bES256K\\b"]
+    },
+    {
+      "id": "x25519",
+      "name": "X25519",
+      "description": "Curve25519 Diffie-Hellman key type used for DID key agreement. Transit cannot represent it, so key pairs are generated with node:crypto and stored in OpenBao KV v2. Credo 0.7 does not expose a key-agreement operation to this backend.",
+      "assetType": "algorithm",
+      "oid": "1.3.101.110",
+      "algorithmProperties": {
+        "primitive": "key-agree",
+        "parameterSetIdentifier": "X25519",
+        "curve": "curve25519",
+        "executionEnvironment": "software-plain-ram",
+        "implementationPlatform": "generic",
+        "certificationLevel": ["none"],
+        "cryptoFunctions": ["keygen"],
+        "classicalSecurityLevel": 128
+      },
+      "providers": ["node-crypto", "openbao"],
+      "detect": ["\\bx25519\\b", "\\bX25519\\b"]
+    },
+    {
+      "id": "rsa-2048",
+      "name": "RSA-2048 (PKCS#1 v1.5)",
+      "description": "RSA-2048 signatures used for RS256/RS384/RS512 and X.509 chains. Keys are generated, imported and used inside OpenBao Transit; signatures are verified locally with node:crypto.",
+      "assetType": "algorithm",
+      "oid": "1.2.840.113549.1.1.1",
+      "algorithmProperties": {
+        "primitive": "signature",
+        "parameterSetIdentifier": "RSA-2048",
+        "executionEnvironment": "software-plain-ram",
+        "implementationPlatform": "generic",
+        "certificationLevel": ["none"],
+        "padding": "pkcs1v15",
+        "cryptoFunctions": ["keygen", "sign", "verify"],
+        "classicalSecurityLevel": 112
+      },
+      "providers": ["openbao", "node-crypto"],
+      "detect": ["\\brsa-2048\\b"]
+    },
+    {
+      "id": "rsa-3072",
+      "name": "RSA-3072 (PKCS#1 v1.5)",
+      "description": "RSA-3072 signatures used for RS256/RS384/RS512 and X.509 chains. Keys are generated, imported and used inside OpenBao Transit; signatures are verified locally with node:crypto.",
+      "assetType": "algorithm",
+      "oid": "1.2.840.113549.1.1.1",
+      "algorithmProperties": {
+        "primitive": "signature",
+        "parameterSetIdentifier": "RSA-3072",
+        "executionEnvironment": "software-plain-ram",
+        "implementationPlatform": "generic",
+        "certificationLevel": ["none"],
+        "padding": "pkcs1v15",
+        "cryptoFunctions": ["keygen", "sign", "verify"],
+        "classicalSecurityLevel": 128
+      },
+      "providers": ["openbao", "node-crypto"],
+      "detect": ["\\brsa-3072\\b"]
+    },
+    {
+      "id": "rsa-4096",
+      "name": "RSA-4096 (PKCS#1 v1.5)",
+      "description": "RSA-4096 signatures used for RS256/RS384/RS512 and X.509 chains. Keys are generated, imported and used inside OpenBao Transit; signatures are verified locally with node:crypto.",
+      "assetType": "algorithm",
+      "oid": "1.2.840.113549.1.1.1",
+      "algorithmProperties": {
+        "primitive": "signature",
+        "parameterSetIdentifier": "RSA-4096",
+        "executionEnvironment": "software-plain-ram",
+        "implementationPlatform": "generic",
+        "certificationLevel": ["none"],
+        "padding": "pkcs1v15",
+        "cryptoFunctions": ["keygen", "sign", "verify"],
+        "classicalSecurityLevel": 152
+      },
+      "providers": ["openbao", "node-crypto"],
+      "detect": ["\\brsa-4096\\b"]
+    },
+    {
+      "id": "rsa-pss",
+      "name": "RSASSA-PSS (RSA-2048/3072/4096)",
+      "description": "RSA-PSS signatures used for PS256/PS384/PS512. The backend sets salt_length=hash so JWA-compliant verifiers accept the signatures.",
+      "assetType": "algorithm",
+      "oid": "1.2.840.113549.1.1.10",
+      "algorithmProperties": {
+        "primitive": "signature",
+        "parameterSetIdentifier": "RSASSA-PSS with RSA-2048/3072/4096",
+        "executionEnvironment": "software-plain-ram",
+        "implementationPlatform": "generic",
+        "certificationLevel": ["none"],
+        "padding": "other",
+        "cryptoFunctions": ["keygen", "sign", "verify"]
+      },
+      "properties": [
+        {
+          "name": "credo:crypto:padding",
+          "value": "RSASSA-PSS, salt length equal to the hash length"
+        }
+      ],
+      "providers": ["openbao", "node-crypto"],
+      "detect": ["\\bPS256\\b", "\\bPS384\\b", "\\bPS512\\b", "salt_length", "'pss'"]
+    },
+    {
+      "id": "rsa-oaep-256",
+      "name": "RSA-OAEP-256 (RSA-4096)",
+      "description": "RSA-OAEP with SHA-256 and MGF1-SHA-256 used to wrap the ephemeral AES key during Transit BYOK import. The wrapping key is always the server's RSA-4096 key.",
+      "assetType": "algorithm",
+      "oid": "1.2.840.113549.1.1.7",
+      "algorithmProperties": {
+        "primitive": "pke",
+        "parameterSetIdentifier": "RSA-4096 with SHA-256 and MGF1-SHA-256",
+        "executionEnvironment": "software-plain-ram",
+        "implementationPlatform": "generic",
+        "certificationLevel": ["none"],
+        "padding": "oaep",
+        "cryptoFunctions": ["encrypt", "decrypt"],
+        "classicalSecurityLevel": 152
+      },
+      "providers": ["node-crypto", "openbao"],
+      "detect": ["RSA_PKCS1_OAEP_PADDING", "oaepHash", "RSA-OAEP"]
+    },
+    {
+      "id": "aes-256-kwp",
+      "name": "AES-256 Key Wrap with Padding (RFC 5649)",
+      "description": "AES Key Wrap with Padding used to wrap PKCS#8 private key material for Transit BYOK import. Implemented in src/aesKeyWrap.ts and unwrapped by OpenBao Transit.",
+      "assetType": "algorithm",
+      "oid": "2.16.840.1.101.3.4.1.45",
+      "algorithmProperties": {
+        "primitive": "other",
+        "parameterSetIdentifier": "AES-256",
+        "executionEnvironment": "software-plain-ram",
+        "implementationPlatform": "generic",
+        "certificationLevel": ["none"],
+        "mode": "other",
+        "cryptoFunctions": ["encrypt", "decrypt"],
+        "classicalSecurityLevel": 256
+      },
+      "properties": [
+        {
+          "name": "credo:crypto:primitive",
+          "value": "key-wrap (RFC 5649)"
+        }
+      ],
+      "providers": ["node-crypto", "openbao"],
+      "detect": ["aesKeyWrapPad", "AES-KWP", "RFC 5649"]
+    },
+    {
+      "id": "aes-256-ecb",
+      "name": "AES-256-ECB",
+      "description": "Single-block AES-ECB primitives used internally by the RFC 5649 AES-KWP implementation. No application data is encrypted directly with ECB.",
+      "assetType": "algorithm",
+      "oid": "2.16.840.1.101.3.4.1.41",
+      "algorithmProperties": {
+        "primitive": "block-cipher",
+        "parameterSetIdentifier": "AES-256",
+        "executionEnvironment": "software-plain-ram",
+        "implementationPlatform": "generic",
+        "certificationLevel": ["none"],
+        "mode": "ecb",
+        "cryptoFunctions": ["encrypt", "decrypt"],
+        "classicalSecurityLevel": 256
+      },
+      "providers": ["node-crypto"],
+      "detect": ["aesEcbEncryptBlock", "aesEcbDecryptBlock"]
+    },
+    {
+      "id": "sha-256",
+      "name": "SHA-256",
+      "description": "SHA-256 digest used by ES256, RS256, PS256, ES256K, RSA-OAEP and MGF1. Computed locally with node:crypto or inside Transit for signing.",
+      "assetType": "algorithm",
+      "oid": "2.16.840.1.101.3.4.2.1",
+      "algorithmProperties": {
+        "primitive": "hash",
+        "parameterSetIdentifier": "SHA-256",
+        "executionEnvironment": "software-plain-ram",
+        "implementationPlatform": "generic",
+        "certificationLevel": ["none"],
+        "cryptoFunctions": ["digest"],
+        "classicalSecurityLevel": 128
+      },
+      "providers": ["node-crypto", "openbao"],
+      "detect": ["\\bsha256\\b", "sha2-256"]
+    },
+    {
+      "id": "sha-384",
+      "name": "SHA-384",
+      "description": "SHA-384 digest used by ES384, RS384 and PS384.",
+      "assetType": "algorithm",
+      "oid": "2.16.840.1.101.3.4.2.2",
+      "algorithmProperties": {
+        "primitive": "hash",
+        "parameterSetIdentifier": "SHA-384",
+        "executionEnvironment": "software-plain-ram",
+        "implementationPlatform": "generic",
+        "certificationLevel": ["none"],
+        "cryptoFunctions": ["digest"],
+        "classicalSecurityLevel": 192
+      },
+      "providers": ["node-crypto", "openbao"],
+      "detect": ["\\bsha384\\b", "sha2-384"]
+    },
+    {
+      "id": "sha-512",
+      "name": "SHA-512",
+      "description": "SHA-512 digest used by ES512, RS512 and PS512.",
+      "assetType": "algorithm",
+      "oid": "2.16.840.1.101.3.4.2.3",
+      "algorithmProperties": {
+        "primitive": "hash",
+        "parameterSetIdentifier": "SHA-512",
+        "executionEnvironment": "software-plain-ram",
+        "implementationPlatform": "generic",
+        "certificationLevel": ["none"],
+        "cryptoFunctions": ["digest"],
+        "classicalSecurityLevel": 256
+      },
+      "providers": ["node-crypto", "openbao"],
+      "detect": ["\\bsha512\\b", "sha2-512"]
+    },
+    {
+      "id": "csprng",
+      "name": "Cryptographically secure random number generation",
+      "description": "Random bytes for ephemeral AES keys, secp256k1 secret keys and X25519 key generation. Provided by the Node.js OpenSSL CSPRNG (randomBytes) and @noble/curves randomSecretKey.",
+      "assetType": "algorithm",
+      "algorithmProperties": {
+        "primitive": "drbg",
+        "parameterSetIdentifier": "OpenSSL CSPRNG / platform entropy",
+        "executionEnvironment": "software-plain-ram",
+        "implementationPlatform": "generic",
+        "certificationLevel": ["none"],
+        "cryptoFunctions": ["generate"],
+        "classicalSecurityLevel": 256
+      },
+      "providers": ["node-crypto", "noble-curves"],
+      "detect": ["\\brandomBytes\\b", "randomSecretKey"]
+    },
+    {
+      "id": "tls-1.2-1.3",
+      "name": "TLS 1.2 / 1.3",
+      "description": "Transport security for the OpenBao HTTP API. The protocol version and cipher suites are configured on the OpenBao listener; this package requires an https:// address for non-local deployments.",
+      "assetType": "protocol",
+      "protocolProperties": {
+        "type": "tls",
+        "version": "1.2, 1.3"
+      },
+      "providers": ["node-crypto", "openbao"],
+      "evidenceFiles": ["README.md"],
+      "detect": ["https://openbao\\.internal"]
+    },
+    {
+      "id": "transit-signing-keys",
+      "name": "OpenBao Transit asymmetric signing keys",
+      "description": "Private keys created or imported into the Transit secrets engine. For createKey the private key never leaves OpenBao; importKey transfers it once as a wrapped PKCS#8 blob.",
+      "assetType": "related-crypto-material",
+      "relatedCryptoMaterialProperties": {
+        "type": "private-key",
+        "state": "active",
+        "securedBy": {
+          "mechanism": "OpenBao barrier encryption and Transit key isolation"
+        }
+      },
+      "providers": ["openbao"],
+      "detect": ["deletion_allowed"]
+    },
+    {
+      "id": "transit-wrapping-key",
+      "name": "OpenBao Transit RSA wrapping key",
+      "description": "The server's RSA-4096 public key returned by GET /transit/wrapping_key and used to wrap the ephemeral AES key for BYOK import.",
+      "assetType": "related-crypto-material",
+      "relatedCryptoMaterialProperties": {
+        "type": "public-key",
+        "state": "active",
+        "size": 4096,
+        "algorithmRef": "rsa-oaep-256"
+      },
+      "providers": ["openbao"],
+      "detect": ["getWrappingKey", "wrapping_key"]
+    },
+    {
+      "id": "kv-secp256k1-key",
+      "name": "secp256k1 private JWK in OpenBao KV v2",
+      "description": "Private secp256k1 JWK stored in the configured KV v2 mount when Transit cannot represent the curve. The private key is read into the agent process to sign.",
+      "assetType": "related-crypto-material",
+      "relatedCryptoMaterialProperties": {
+        "type": "private-key",
+        "state": "active",
+        "size": 256,
+        "algorithmRef": "secp256k1",
+        "securedBy": {
+          "mechanism": "OpenBao KV v2 barrier encryption; readable by any client with read access to the path"
+        }
+      },
+      "providers": ["openbao", "noble-curves"],
+      "detect": ["credo-keys", "\\bsecp256k1\\b"]
+    },
+    {
+      "id": "kv-x25519-key",
+      "name": "X25519 private JWK in OpenBao KV v2",
+      "description": "Private X25519 JWK stored in the configured KV v2 mount when Transit cannot represent the curve. Used for DID key agreement by the Credo agent.",
+      "assetType": "related-crypto-material",
+      "relatedCryptoMaterialProperties": {
+        "type": "private-key",
+        "state": "active",
+        "size": 256,
+        "algorithmRef": "x25519",
+        "securedBy": {
+          "mechanism": "OpenBao KV v2 barrier encryption; readable by any client with read access to the path"
+        }
+      },
+      "providers": ["openbao", "node-crypto"],
+      "detect": ["credo-keys", "\\bx25519\\b"]
+    },
+    {
+      "id": "ephemeral-aes-kek",
+      "name": "Ephemeral AES-256 key-encryption key",
+      "description": "A random 32-byte AES key created for each Transit BYOK import. It wraps the PKCS#8 private key with AES-KWP and is itself wrapped with the Transit RSA wrapping key.",
+      "assetType": "related-crypto-material",
+      "relatedCryptoMaterialProperties": {
+        "type": "secret-key",
+        "state": "active",
+        "size": 256,
+        "algorithmRef": "aes-256-kwp"
+      },
+      "providers": ["node-crypto"],
+      "detect": ["randomBytes\\(32\\)"]
+    }
+  ],
+  "driftWatch": [
+    {
+      "pattern": "\\bhmac\\b",
+      "reason": "OpenBao's HMAC key type is declared in the client type union but this backend does not implement HMAC operations."
+    },
+    {
+      "pattern": "\\bchacha20(?:-poly1305)?\\b|\\baes-?128-gcm\\b|\\baes-?256-gcm\\b",
+      "reason": "OpenBao AES-GCM and ChaCha20 transit key types are declared in the client type union but are not used by this backend. DIDComm encryption is left to the Node.js/Askar backend."
+    },
+    {
+      "pattern": "\\baes-?(?:128|192)\\b|\\baes(?:128|192|256)-gcm96\\b",
+      "reason": "Only AES-256 is used by the RFC 5649 implementation. Add an inventory asset if AES-128 or AES-192 is introduced."
+    },
+    {
+      "pattern": "\\b(?:md5|sha-?1|sha-?224)\\b",
+      "reason": "Weak or unused digest. OpenBao's import API accepts SHA1/SHA224 hash names, but this backend always uses SHA-256."
+    },
+    {
+      "pattern": "\\b(?:p-?192|p-?224|ed448|x448)\\b",
+      "reason": "Curve is not used by Credo 0.7 or this backend."
+    },
+    {
+      "pattern": "\\brsa-?(?:512|1024)\\b",
+      "reason": "RSA keys smaller than 2048 bits are not supported by this backend."
+    },
+    {
+      "pattern": "\\b(?:ml-kem|ml-dsa|slh-dsa)\\b",
+      "reason": "Post-quantum algorithm. Add a cryptographic asset before using it."
+    },
+    {
+      "pattern": "\\b(?:pbkdf2|scrypt|argon2)\\b",
+      "reason": "Password hashing/KDF is not used by this backend."
+    },
+    {
+      "pattern": "\\b(?:ecdh|diffie-hellman|blowfish|3des|rc4)\\b",
+      "reason": "Algorithm is not used by this backend. Add a cryptographic asset if it becomes part of the implementation."
+    }
+  ]
+}

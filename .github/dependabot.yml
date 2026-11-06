@@ -1,0 +1,37 @@
+version: 2
+
+updates:
+  - package-ecosystem: npm
+    directory: '/'
+    schedule:
+      interval: weekly
+      day: monday
+      time: '03:00'
+      timezone: Etc/UTC
+    open-pull-requests-limit: 10
+    labels:
+      - dependencies
+    commit-message:
+      prefix: 'chore(deps)'
+    groups:
+      credo:
+        patterns:
+          - '@credo-ts/*'
+      development:
+        dependency-type: development
+        update-types:
+          - minor
+          - patch
+
+  - package-ecosystem: github-actions
+    directory: '/'
+    schedule:
+      interval: weekly
+      day: monday
+      time: '03:00'
+      timezone: Etc/UTC
+    labels:
+      - dependencies
+      - github-actions
+    commit-message:
+      prefix: 'chore(deps)'

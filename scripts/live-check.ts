@@ -1,5 +1,6 @@
 /**
  * Copyright 2026 AyanWorks Technology Solutions Pvt. Ltd.
+ * SPDX-License-Identifier: Apache-2.0
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -35,12 +36,10 @@ import {
   GenericRecord,
   InjectionSymbols,
   LogLevel,
-  RecordNotFoundError,
   TypedArrayEncoder,
   X509KeyUsage,
   X509Service,
   getPublicJwkFromVerificationMethod,
-  type AgentContext,
   type StorageService,
 } from '@credo-ts/core'
 import {
@@ -53,7 +52,7 @@ import {
 } from '@credo-ts/core/kms'
 import { DrizzleStorageModule } from '@credo-ts/drizzle-storage'
 import { coreBundle } from '@credo-ts/drizzle-storage/core'
-import { NodeKeyManagementService, agentDependencies, type NodeKeyManagementStorage } from '@credo-ts/node'
+import { NodeKeyManagementService, agentDependencies } from '@credo-ts/node'
 import { secp256k1 } from '@noble/curves/secp256k1.js'
 import Database from 'better-sqlite3'
 import { drizzle } from 'drizzle-orm/better-sqlite3'
@@ -64,6 +63,7 @@ import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 import { FetchOpenBaoClient, OpenBaoKeyManagementService, type OpenBaoTransitKey } from '../src/index.js'
+import { DrizzleNodeKeyManagementStorage } from './drizzleNodeKeyManagementStorage.js'
 
 const ADDRESS = process.env.OPENBAO_ADDR ?? 'http://127.0.0.1:8200'
 const TOKEN = process.env.OPENBAO_TOKEN ?? 'root'
@@ -84,59 +84,6 @@ function check(name: string, condition: boolean, detail?: unknown): void {
  * storage service. With Drizzle this means they survive restarts and live in
  * the same SQLite database as DIDs and credentials.
  */
-class DrizzleNodeKeyManagementStorage implements NodeKeyManagementStorage {
-  #storage(agentContext: AgentContext): StorageService<GenericRecord> {
-    return agentContext.resolve(InjectionSymbols.StorageService)
-  }
-
-  #recordId(keyId: string): string {
-    return `node-kms-${keyId}`
-  }
-
-  public async get(agentContext: AgentContext, keyId: string): Promise<KmsJwkPrivate | null> {
-    try {
-      const record = await this.#storage(agentContext).getById(agentContext, GenericRecord, this.#recordId(keyId))
-      return (record.content as { privateJwk?: KmsJwkPrivate }).privateJwk ?? null
-    } catch (error) {
-      if (error instanceof RecordNotFoundError) return null
-      throw error
-    }
-  }
-
-  public async has(agentContext: AgentContext, keyId: string): Promise<boolean> {
-    return (await this.get(agentContext, keyId)) !== null
-  }
-
-  public async set(agentContext: AgentContext, keyId: string, jwk: KmsJwkPrivate): Promise<void> {
-    const storage = this.#storage(agentContext)
-    const id = this.#recordId(keyId)
-
-    let record: GenericRecord | undefined
-    try {
-      record = await storage.getById(agentContext, GenericRecord, id)
-    } catch (error) {
-      if (!(error instanceof RecordNotFoundError)) throw error
-    }
-
-    if (record) {
-      record.content = { privateJwk: jwk }
-      await storage.update(agentContext, record)
-    } else {
-      await storage.save(agentContext, new GenericRecord({ id, content: { privateJwk: jwk } }))
-    }
-  }
-
-  public async delete(agentContext: AgentContext, keyId: string): Promise<boolean> {
-    try {
-      await this.#storage(agentContext).deleteById(agentContext, GenericRecord, this.#recordId(keyId))
-      return true
-    } catch (error) {
-      if (error instanceof RecordNotFoundError) return false
-      throw error
-    }
-  }
-}
-
 function toPrivateJwk(key: KeyObject): KmsJwkPrivate {
   return key.export({ format: 'jwk' }) as KmsJwkPrivate
 }
