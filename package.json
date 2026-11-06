@@ -1,22 +1,35 @@
 {
-  "name": "credo-ts-openbao",
-  "version": "0.1.0",
+  "name": "@credebl/credo-ts-openbao",
+  "version": "0.2.0",
   "description": "OpenBao Transit key management backend for Credo (KMS plug-in)",
   "type": "module",
   "license": "Apache-2.0",
   "codeowners": [
     "AyanWorks"
   ],
+  "homepage": "https://github.com/sovio-id/credo-ts-openbao#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/sovio-id/credo-ts-openbao.git"
+  },
+  "bugs": {
+    "url": "https://github.com/sovio-id/credo-ts-openbao/issues"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
   "main": "./build/index.js",
   "types": "./build/index.d.ts",
   "exports": {
     ".": {
       "types": "./build/index.d.ts",
-      "import": "./build/index.js"
+      "import": "./build/index.js",
+      "default": "./build/index.js"
     }
   },
   "files": [
-    "build"
+    "build",
+    "docs/seal.md"
   ],
   "scripts": {
     "fmt": "bun fmt --no-script src test scripts package.json bunfig.toml",

@@ -19,12 +19,24 @@ export {
   FetchOpenBaoClient,
   OpenBaoNotFoundError,
   OpenBaoRequestError,
+  OpenBaoSealedError,
+  OpenBaoUnreachableError,
   type FetchOpenBaoClientOptions,
   type OpenBaoClient,
+  type OpenBaoHealth,
   type OpenBaoImportKeyOptions,
   type OpenBaoKeyType,
+  type OpenBaoListKeysOptions,
   type OpenBaoSignOptions,
   type OpenBaoTransitKey,
 } from './OpenBaoClient.js'
 
-export { OpenBaoKeyManagementService, type OpenBaoKeyManagementServiceOptions } from './OpenBaoKeyManagementService.js'
+export {
+  OPENBAO_KEY_ID_PREFIX,
+  OpenBaoKeyManagementService,
+  openBaoKeyId,
+  type KeyNameScopeResolver,
+  type OpenBaoKeyManagementServiceOptions,
+} from './OpenBaoKeyManagementService.js'
+
+export { AppRoleAuth, StaticTokenAuth, type AppRoleAuthOptions, type AuthProvider } from './auth.js'

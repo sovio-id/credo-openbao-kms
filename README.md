@@ -1,4 +1,4 @@
-# credo-ts-openbao
+# @credebl/credo-ts-openbao
 
 An [OpenBao](https://openbao.org) Transit backend for Credo's key management
 service (KMS), plus the feasibility findings behind it.
@@ -31,7 +31,7 @@ import { Agent } from '@credo-ts/core'
 import { KeyManagementModule } from '@credo-ts/core/kms'
 import { NodeInMemoryKeyManagementStorage, NodeKeyManagementService } from '@credo-ts/node'
 
-import { FetchOpenBaoClient, OpenBaoKeyManagementService } from 'credo-ts-openbao'
+import { FetchOpenBaoClient, OpenBaoKeyManagementService } from '@credebl/credo-ts-openbao'
 
 const openBao = new OpenBaoKeyManagementService({
   client: new FetchOpenBaoClient({
@@ -79,6 +79,61 @@ const { verified } = await agent.kms.verify({ key: { publicJwk }, algorithm: 'ES
 
 On Node, import `@credo-ts/core` before `@credo-ts/core/kms` in the file your app
 loads first: the `kms` entry point does not load the `reflect-metadata` polyfill.
+
+### AppRole instead of a static token
+
+Use `AppRoleAuth` for anything beyond local development. It logs in, tracks the
+lease, renews the token, and logs in again when renewal is no longer possible.
+Concurrent requests share one refresh, so a burst of signatures does not create
+a burst of logins.
+
+```ts
+import { AppRoleAuth, FetchOpenBaoClient, OpenBaoKeyManagementService } from '@credebl/credo-ts-openbao'
+
+const auth = new AppRoleAuth({
+  address: 'https://openbao.internal:8200',
+  roleId: process.env.OPENBAO_ROLE_ID!,
+  // Prefer a file injected by the platform over an environment variable.
+  secretIdFile: '/var/run/secrets/openbao/secret-id',
+})
+
+const openBao = new OpenBaoKeyManagementService({
+  client: new FetchOpenBaoClient({
+    address: 'https://openbao.internal:8200',
+    token: () => auth.getToken(),
+  }),
+  deploymentId: 'wallet-1',
+})
+```
+
+The token never appears in agent configuration, logs, or process arguments. Rotate
+the secret id at the server, then call `auth.setSecretId(newSecretId)`.
+
+### Fail fast, then roll back without losing keys
+
+`assertHealthy()` calls `sys/health` and throws `OpenBaoSealedError` when the node
+is sealed and `OpenBaoUnreachableError` when it cannot be reached. Call it during
+startup so a sealed node does not look like a mysterious signing failure later.
+
+```ts
+await openBao.assertHealthy()
+```
+
+`writeEnabled: false` is the rollback switch. Existing keys can still sign and
+verify, `isOperationSupported` reports `false` for create/import/delete, and new
+keys go to the next backend in registration order. Do not unregister the
+backend while OpenBao-backed keys exist: their DIDs and credentials still need
+it.
+
+### Tenant cleanup
+
+```ts
+// Delete every OpenBao key for one tenant.
+const deleted = await openBao.purgeScope(openBao.scopeForCorrelationId(`tenant-${tenantId}`))
+```
+
+Purging lists all Transit keys with pagination and deletes only names in the
+tenant's scope. It never touches another tenant's keys.
 
 ---
 
@@ -469,8 +524,17 @@ and has the weaker security model described in
   `secret/metadata/credo-keys/*`. Granting `create` on `keys/*` lets a
   compromised app create keys; pre-provision keys and deny `create` where
   possible. Never grant `export`.
-- Prefer AppRole or Kubernetes auth with a renewable, short-TTL token. Pass a
-  token provider function rather than a static root token.
+- Prefer AppRole or Kubernetes auth with a renewable, short-TTL token. Use the
+  bundled `AppRoleAuth` provider rather than a static root token. Set
+  `token_ttl=1h`, `token_max_ttl=8h`, `secret_id_ttl=0`, and
+  `bind_secret_id=true` as a starting point.
+- Deny `transit/keys/*/rotate`, `transit/export/*`, and `transit/backup/*` in
+  the agent-controller policy. A rotated Transit key changes the public key and
+  breaks every existing DID and credential. See
+  [docs/seal.md](docs/seal.md) for the policy snippet and runbooks.
+- Set `writeEnabled: false` (or `OPENBAO_WRITE_ENABLED=false` in
+  agent-controller) when rolling back writes, and pair it with a read/sign-only
+  AppRole. The application flag is not an authorization boundary.
 - Transit's `external-key` type can front an HSM or another cloud KMS when the
   OpenBao server is configured with an `ExternalKeyFactory`, so key material can
   later move behind OpenBao without changing Credo. This backend does not
@@ -478,16 +542,41 @@ and has the weaker security model described in
 
 ---
 
-## Key id to Transit key name
+## Key ids, namespacing, and tenant scope
 
-Transit key names must start and end with a word character. UUIDs qualify, so
-Credo's default key ids are used as the key name directly and remain readable in
-OpenBao. Other ids (DID URLs, for example) are base64url encoded with a `credo-`
-prefix.
+Two different strings are involved:
 
-There is a theoretical collision between a literal key id and an encoded one
-(e.g. key id `credo-YWJj` vs. the encoded form of `abc`). Use
-`useDirectKeyNames: false` to always encode if that matters.
+1. **The Credo key id.** This is what DIDs, credential records, and X.509
+   bindings store. Every key returned by this backend starts with `ob_`.
+2. **The Transit key name.** This is what OpenBao sees. It never contains raw
+   DID URLs or tenant ids.
+
+Key ids are namespaced because Credo routes key-based operations by asking each
+backend for the key in registration order. Askar stores an imported JWK's `kid`
+verbatim, so without a prefix the same key id could exist in both stores and
+Askar would silently win. Use the `keyId` returned by `createKey` or `importKey`;
+never reconstruct it from the input.
+
+Transit names are derived from the isolation scope and the key id:
+
+```
+scope     = <deploymentId>:<contextCorrelationId>   (or just the context id)
+scopeHash = sha256(scope).slice(0, 16)
+name      = ac_<scopeHash>_<base64url(keyId)>
+```
+
+`contextCorrelationId` is `default` for the root agent and `tenant-<id>` for a
+tenant. The hash keeps tenant ids out of OpenBao while still giving each tenant
+a distinct name. Names longer than 128 characters are replaced by a hash
+suffix. The public-key cache is keyed by the scope and key id, so one tenant can
+never read another tenant's public key.
+
+Set `deploymentId` when several agent-controller deployments share one OpenBao
+cluster. The same key id in two deployments then maps to two Transit keys.
+
+`purgeScope(scope)` deletes every Transit (and optional KV) key in a scope. Use
+it before deleting a tenant; do not delete individual keys that a DID still
+references.
 
 ---
 
@@ -712,11 +801,37 @@ Dependency-Track/GHCR integration, and how to add a cryptographic asset.
 
 ---
 
+## Deployment and operations
+
+OpenBao must be unsealed before it can sign or serve keys. The seal protects
+OpenBao's own storage-encryption key; it is independent of the Transit keys used
+for DIDs and credentials.
+
+[docs/seal.md](docs/seal.md) covers every OpenBao 2.7 unseal option (Shamir,
+static, Transit, PKCS#11, KMIP, AWS/GCP/Azure/OCI/AliCloud/OVHcloud/T Cloud
+Public KMS, and Securosys Primus), with configurations, a decision guide for
+CREDEBL deployments, migration and disaster-recovery runbooks, and the rules
+that keep a seal rotation from breaking existing DIDs.
+
+The short version:
+
+- Self-hosted with supervised restarts: Shamir 5-of-3.
+- Self-hosted, unattended, no HSM: Transit seal from a dedicated unseal cluster.
+- HSM available: PKCS#11 or KMIP.
+- Existing secret manager: static seal.
+- CREDEBL SaaS: the cloud KMS of the hosting provider.
+
+Never rotate a Transit key that backs a DID or credential. Rotation changes the
+public key and breaks existing verification.
+
+---
+
 ## Files
 
 ```
 src/OpenBaoClient.ts                 fetch client for Transit plus the KV v2 fallback endpoints
 src/OpenBaoKeyManagementService.ts   the KeyManagementService implementation
+src/auth.ts                          AppRole login/renewal and static token providers
 src/aesKeyWrap.ts                    RFC 5649 AES-KWP, implemented over AES-ECB
 src/secp256k1.ts                     secp256k1 key generation/sign/verify via @noble/curves
 src/transitImport.ts                 JWK -> PKCS#8, public JWK derivation, BYOK wrapping
@@ -724,6 +839,7 @@ src/index.ts                         package exports
 scripts/live-check.ts                Drizzle/SQLite agent against a live OpenBao
 scripts/dev-agent.ts                 long-running agent + HTTP API for local development
 scripts/drizzleNodeKeyManagementStorage.ts  persist Node KMS keys as GenericRecords
+docs/seal.md                         every OpenBao unseal option and CREDEBL runbooks
 demo/                                development-only demo web app (HTML/CSS/JS, no build step)
 docker-compose.yml                   OpenBao + init sidecar + Credo agent + demo app
 docker/openbao/config.hcl            PebbleDB storage and an insecure HTTP listener

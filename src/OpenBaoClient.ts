@@ -45,6 +45,43 @@ export class OpenBaoRequestError extends Error {
   }
 }
 
+/**
+ * The OpenBao node is reachable but sealed. This is operationally different
+ * from a network failure: the node needs unsealing, not a retry or a firewall
+ * change. Callers can catch this error separately and alert on it.
+ */
+export class OpenBaoSealedError extends OpenBaoRequestError {
+  public constructor(method: string, path: string, errors: string[]) {
+    super(method, path, 503, errors.length > 0 ? errors : ['OpenBao is sealed'])
+    this.name = 'OpenBaoSealedError'
+  }
+}
+
+/** The OpenBao address could not be reached, or the request timed out. */
+export class OpenBaoUnreachableError extends Error {
+  public readonly address: string
+
+  public constructor(address: string, reason: string, options?: { cause?: unknown }) {
+    super(`OpenBao at ${address} is unreachable: ${reason}`, options)
+    this.name = 'OpenBaoUnreachableError'
+    this.address = address
+  }
+}
+
+export interface OpenBaoHealth {
+  initialized: boolean
+  sealed: boolean
+  standby: boolean
+  version?: string
+}
+
+export interface OpenBaoListKeysOptions {
+  /** Return keys that sort after this name. Used for pagination. */
+  after?: string
+  /** Maximum number of names to return. OpenBao defaults to the server limit. */
+  limit?: number
+}
+
 export interface OpenBaoResponse<T> {
   data: T
   warnings?: string[]
@@ -55,6 +92,8 @@ export interface OpenBaoClient {
   createKey(name: string, type: OpenBaoKeyType): Promise<OpenBaoTransitKey>
   updateKeyConfig(name: string, config: { deletionAllowed: boolean }): Promise<void>
   deleteKey(name: string): Promise<void>
+  /** List Transit key names. Supports pagination with `after` and `limit`. */
+  listKeys(options?: OpenBaoListKeysOptions): Promise<string[]>
   sign(name: string, options: OpenBaoSignOptions): Promise<string>
   /** RSA-4096 public key (PEM) used to wrap key material for BYOK import. */
   getWrappingKey(): Promise<string>
@@ -65,10 +104,16 @@ export interface OpenBaoClient {
    * not exist. Used for key types Transit cannot represent (secp256k1, X25519).
    */
   getKv(mount: string, path: string): Promise<Record<string, unknown> | null>
+  /** List keys below a path in a KV v2 mount (`LIST /v1/<mount>/metadata/<path>`). */
+  listKv(mount: string, path: string): Promise<string[]>
   /** Write a JSON object to a KV v2 mount (creates a new version). */
   putKv(mount: string, path: string, data: Record<string, unknown>): Promise<void>
   /** Delete all versions and metadata of a KV v2 entry. */
   deleteKv(mount: string, path: string): Promise<void>
+  /** Read `sys/health`. Unlike the other calls, this does not need a token. */
+  health(): Promise<OpenBaoHealth>
+  /** Fail fast at startup when the node is sealed, uninitialised, or unreachable. */
+  assertHealthy(): Promise<void>
 }
 
 export interface OpenBaoImportKeyOptions {
@@ -186,6 +231,16 @@ export class FetchOpenBaoClient implements OpenBaoClient {
     await this.#request('DELETE', `keys/${encodeURIComponent(name)}`)
   }
 
+  public async listKeys(options: OpenBaoListKeysOptions = {}): Promise<string[]> {
+    const query = new URLSearchParams()
+    if (options.after) query.set('after', options.after)
+    if (options.limit !== undefined) query.set('limit', String(options.limit))
+    const queryString = query.toString()
+    const suffix = queryString.length > 0 ? `?${queryString}` : ''
+    const data = await this.#request<{ keys: string[] }>('LIST', `keys${suffix}`)
+    return data.keys ?? []
+  }
+
   public async getWrappingKey(): Promise<string> {
     const data = await this.#request<{ public_key: string }>('GET', 'wrapping_key')
     return data.public_key
@@ -211,6 +266,16 @@ export class FetchOpenBaoClient implements OpenBaoClient {
     }
   }
 
+  public async listKv(mount: string, path: string): Promise<string[]> {
+    try {
+      const data = await this.#request<{ keys: string[] }>('LIST', `metadata/${path}`, undefined, mount)
+      return data.keys ?? []
+    } catch (error) {
+      if (error instanceof OpenBaoNotFoundError) return []
+      throw error
+    }
+  }
+
   public async putKv(mount: string, path: string, data: Record<string, unknown>): Promise<void> {
     await this.#request('POST', `data/${path}`, { data }, mount)
   }
@@ -232,6 +297,58 @@ export class FetchOpenBaoClient implements OpenBaoClient {
     return data.signature
   }
 
+  public async health(): Promise<OpenBaoHealth> {
+    // `standbyok=true` turns a healthy standby into a 200. Sealed (503) and
+    // uninitialised (501) still have distinct statuses and bodies.
+    const url = `${this.#address}/v1/sys/health?standbyok=true`
+    let response: Response
+    try {
+      response = await this.#fetch(url, {
+        method: 'GET',
+        headers: { accept: 'application/json' },
+        signal: AbortSignal.timeout(this.#timeoutMs),
+      })
+    } catch (error) {
+      throw new OpenBaoUnreachableError(this.#address, describeFetchFailure(error), { cause: error })
+    }
+
+    let body: {
+      initialized?: boolean
+      sealed?: boolean
+      standby?: boolean
+      version?: string
+      errors?: string[]
+    } = {}
+    try {
+      const text = await response.text()
+      body = text.length > 0 ? (JSON.parse(text) as typeof body) : {}
+    } catch {
+      // A proxy may return HTML. The status code still tells us enough.
+    }
+
+    if (body.sealed === true || response.status === 503) {
+      throw new OpenBaoSealedError('GET', 'sys/health', body.errors ?? ['OpenBao is sealed'])
+    }
+    if (body.initialized === false || response.status === 501) {
+      throw new OpenBaoUnreachableError(this.#address, 'OpenBao is not initialized')
+    }
+    // 429 is a standby without `standbyok`, 472/473 are DR/perf standbys.
+    if (!response.ok && ![429, 472, 473].includes(response.status)) {
+      throw new OpenBaoUnreachableError(this.#address, `health check returned HTTP ${response.status}`)
+    }
+
+    return {
+      initialized: body.initialized ?? true,
+      sealed: false,
+      standby: body.standby === true,
+      ...(body.version ? { version: body.version } : {}),
+    }
+  }
+
+  public async assertHealthy(): Promise<void> {
+    await this.health()
+  }
+
   async #request<T>(
     method: string,
     path: string,
@@ -246,23 +363,51 @@ export class FetchOpenBaoClient implements OpenBaoClient {
     if (this.#namespace) headers['X-Vault-Namespace'] = this.#namespace
     if (body) headers['content-type'] = 'application/json'
 
-    const response = await this.#fetch(`${this.#address}/v1/${mountPath}/${path}`, {
-      method,
-      headers,
-      ...(body ? { body: JSON.stringify(body) } : {}),
-      signal: AbortSignal.timeout(this.#timeoutMs),
-    })
+    let response: Response
+    try {
+      response = await this.#fetch(`${this.#address}/v1/${mountPath}/${path}`, {
+        method,
+        headers,
+        ...(body ? { body: JSON.stringify(body) } : {}),
+        signal: AbortSignal.timeout(this.#timeoutMs),
+      })
+    } catch (error) {
+      throw new OpenBaoUnreachableError(this.#address, describeFetchFailure(error), { cause: error })
+    }
 
     const text = await response.text()
-    const parsed = text.length > 0 ? (JSON.parse(text) as { data?: T; errors?: string[]; warnings?: string[] }) : {}
+    let parsed: { data?: T; errors?: string[]; warnings?: string[] } = {}
+    try {
+      parsed = text.length > 0 ? (JSON.parse(text) as typeof parsed) : {}
+    } catch {
+      // Keep the status code and a short body excerpt for the error message.
+      if (!response.ok) parsed.errors = [text.slice(0, 200)]
+    }
 
+    const errors = parsed.errors ?? []
+    if (response.status === 503 && errors.some((message) => /seal/i.test(message))) {
+      throw new OpenBaoSealedError(method, path, errors)
+    }
     if (response.status === 404) {
       throw new OpenBaoNotFoundError(`OpenBao key not found for ${method} ${path}`)
     }
     if (!response.ok) {
-      throw new OpenBaoRequestError(method, path, response.status, parsed.errors ?? [])
+      throw new OpenBaoRequestError(method, path, response.status, errors)
     }
     // 204 No Content (e.g. key import) is a success without a body.
     return (parsed.data ?? (undefined as T)) as T
   }
+}
+
+function describeFetchFailure(error: unknown): string {
+  if (error instanceof Error) {
+    if (error.name === 'AbortError' || error.name === 'TimeoutError') return 'request timed out'
+    // Node's fetch wraps connection failures in a generic TypeError.
+    if (error.name === 'TypeError' && error.message === 'fetch failed') {
+      const cause = (error as { cause?: unknown }).cause
+      if (cause instanceof Error) return cause.message
+    }
+    return error.message
+  }
+  return String(error)
 }
