@@ -1,0 +1,9 @@
+.git
+.gitignore
+.github
+build
+coverage
+data
+node_modules
+*.log
+.DS_Store

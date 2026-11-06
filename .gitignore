@@ -29,6 +29,9 @@ yarn-error.log*
 pnpm-debug.log*
 bun-debug.log*
 
+# Local Docker / agent data
+data/
+
 # Runtime / caches
 .bun/
 .cache/

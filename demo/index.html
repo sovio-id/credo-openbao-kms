@@ -1,0 +1,455 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Credo × OpenBao — KMS demo</title>
+    <meta
+      name="description"
+      content="Development-only demo of every Credo KMS feature with OpenBao Transit as the key backend."
+    />
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <div class="dev-banner" role="note">
+      <strong>DEV ONLY</strong>
+      <span>
+        This demo exposes an auto-unsealed OpenBao with a root token and a permissive API. Run it locally only — never
+        in production.
+      </span>
+    </div>
+
+    <header class="topbar">
+      <div class="brand">
+        <span class="brand-mark">C</span>
+        <div>
+          <div class="brand-title">Credo <span class="times">×</span> OpenBao</div>
+          <div class="brand-subtitle">Key management demo</div>
+        </div>
+      </div>
+
+      <nav class="nav" id="nav" aria-label="Demo sections">
+        <button class="nav-link active" data-view="overview">Overview</button>
+        <button class="nav-link" data-view="keys">Keys</button>
+        <button class="nav-link" data-view="sign">Sign &amp; verify</button>
+        <button class="nav-link" data-view="crypto">Random &amp; encrypt</button>
+        <button class="nav-link" data-view="dids">DIDs</button>
+        <button class="nav-link" data-view="x509">X.509</button>
+        <button class="nav-link" data-view="activity">Activity <span class="count" id="activity-count">0</span></button>
+      </nav>
+
+      <button class="btn ghost small" id="refresh-info" type="button">Refresh status</button>
+    </header>
+
+    <main class="shell">
+      <!-- Overview -->
+      <section class="view active" id="view-overview" aria-labelledby="overview-title">
+        <div class="hero">
+          <div>
+            <p class="eyebrow">OpenBao Transit + KV v2 fallback</p>
+            <h1 id="overview-title">Every Credo key type, one OpenBao backend.</h1>
+            <p class="hero-copy">
+              Create, import, sign, verify and delete keys through Credo's 0.7 <code>KeyManagementService</code> API.
+              OpenBao Transit holds Ed25519, NIST EC and RSA keys; a KV v2 mount holds secp256k1 and X25519; the Node.js
+              backend handles randomness and AES-GCM. DIDs and X.509 certificates are issued from the same keys.
+            </p>
+          </div>
+          <div class="hero-badges">
+            <span class="pill" id="pill-openbao">Checking OpenBao…</span>
+            <span class="pill" id="pill-storage">SQLite</span>
+            <span class="pill" id="pill-backend">openbao default</span>
+          </div>
+        </div>
+
+        <div class="grid two">
+          <article class="card">
+            <div class="card-head">
+              <h2>System status</h2>
+              <span class="muted" id="info-updated">Not loaded</span>
+            </div>
+            <dl class="status-list" id="system-status">
+              <div>
+                <dt>OpenBao</dt>
+                <dd class="skeleton">Loading…</dd>
+              </div>
+            </dl>
+          </article>
+
+          <article class="card">
+            <div class="card-head">
+              <h2>Operation routing</h2>
+              <span class="muted">Which backend Credo picks</span>
+            </div>
+            <div class="capabilities" id="capabilities">
+              <div class="skeleton">Loading…</div>
+            </div>
+          </article>
+        </div>
+
+        <article class="card">
+          <div class="card-head">
+            <h2>Supported key types</h2>
+            <span class="muted">What this demo can create</span>
+          </div>
+          <div class="table-wrap">
+            <table class="table" id="catalog-table">
+              <thead>
+                <tr>
+                  <th>Key type</th>
+                  <th>Storage</th>
+                  <th>Signature algorithms</th>
+                  <th>DID methods</th>
+                  <th>Notes</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td colspan="5" class="skeleton">Loading catalog…</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </article>
+
+        <article class="card callout-card">
+          <div class="callout-icon">i</div>
+          <div>
+            <h2>How to read this demo</h2>
+            <p>
+              Start in <button class="link" data-goto="keys">Keys</button>, generate or import any key type, then use
+              <button class="link" data-goto="sign">Sign &amp; verify</button>. The key catalog is kept in this
+              browser's <code>localStorage</code>; the keys themselves live in OpenBao or SQLite. Use
+              <button class="link" data-goto="dids">DIDs</button> and
+              <button class="link" data-goto="x509">X.509</button>
+              to see Credo consume the same KMS keys.
+            </p>
+          </div>
+        </article>
+      </section>
+
+      <!-- Keys -->
+      <section class="view" id="view-keys" aria-labelledby="keys-title">
+        <div class="view-head">
+          <div>
+            <p class="eyebrow">createKey / importKey / getPublicKey / deleteKey</p>
+            <h1 id="keys-title">Keys</h1>
+            <p class="view-copy">
+              Generate a key inside OpenBao, or import an externally generated JWK through Transit BYOK. secp256k1 and
+              X25519 use the KV v2 fallback; AES-256 is handled by the Node.js backend.
+            </p>
+          </div>
+        </div>
+
+        <article class="card">
+          <div class="form-grid">
+            <label class="field">
+              <span>Key type</span>
+              <select id="key-type"></select>
+            </label>
+            <label class="field">
+              <span>Key id <em>optional</em></span>
+              <input id="key-id" type="text" placeholder="auto-generated UUID" autocomplete="off" spellcheck="false" />
+            </label>
+            <div class="field actions-field">
+              <span>&nbsp;</span>
+              <div class="button-row">
+                <button class="btn primary" id="create-key" type="button">Generate key</button>
+                <button class="btn" id="import-key" type="button">Import sample JWK</button>
+                <button class="btn ghost" id="create-all" type="button">Create all key types</button>
+              </div>
+            </div>
+          </div>
+          <p class="hint" id="key-type-hint">The selected key type's storage and capabilities appear here.</p>
+        </article>
+
+        <article class="card">
+          <div class="card-head">
+            <h2>Tracked keys</h2>
+            <div class="button-row">
+              <button class="btn ghost small" id="clear-keys" type="button">Clear local list</button>
+            </div>
+          </div>
+          <div class="table-wrap">
+            <table class="table" id="keys-table">
+              <thead>
+                <tr>
+                  <th>Key</th>
+                  <th>Store</th>
+                  <th>Algorithms</th>
+                  <th>Source</th>
+                  <th class="right">Actions</th>
+                </tr>
+              </thead>
+              <tbody></tbody>
+            </table>
+          </div>
+          <p class="hint">
+            Clearing this list only forgets the ids in the browser. Delete keys individually to remove them from OpenBao
+            or SQLite.
+          </p>
+        </article>
+      </section>
+
+      <!-- Sign & verify -->
+      <section class="view" id="view-sign" aria-labelledby="sign-title">
+        <div class="view-head">
+          <div>
+            <p class="eyebrow">sign / verify</p>
+            <h1 id="sign-title">Sign &amp; verify</h1>
+            <p class="view-copy">
+              Signing happens inside OpenBao Transit for native key types. secp256k1 signatures are produced in-process
+              from KV-held key material. Verification uses public material only.
+            </p>
+          </div>
+        </div>
+
+        <div class="grid two">
+          <article class="card">
+            <div class="card-head"><h2>Request</h2></div>
+            <label class="field">
+              <span>Key</span>
+              <select id="sign-key"></select>
+            </label>
+            <label class="field">
+              <span>Algorithm</span>
+              <select id="sign-algorithm"></select>
+            </label>
+            <label class="field">
+              <span>Data</span>
+              <textarea id="sign-data" rows="5" spellcheck="false">Hello from Credo KMS + OpenBao</textarea>
+            </label>
+            <div class="button-row">
+              <button class="btn primary" id="do-sign" type="button">Sign</button>
+              <button class="btn" id="do-verify" type="button" disabled>Verify signature</button>
+            </div>
+          </article>
+
+          <article class="card result-card">
+            <div class="card-head">
+              <h2>Result</h2>
+              <span class="badge neutral" id="sign-status">Waiting</span>
+            </div>
+            <div class="kv" id="sign-meta">
+              <span class="muted">Sign a payload to see the algorithm, key and signature.</span>
+            </div>
+            <label class="field">
+              <span>Signature <em>base64url</em></span>
+              <textarea id="sign-signature" rows="4" readonly placeholder="—"></textarea>
+            </label>
+            <div class="verify-result" id="verify-result"></div>
+          </article>
+        </div>
+      </section>
+
+      <!-- Random & encrypt -->
+      <section class="view" id="view-crypto" aria-labelledby="crypto-title">
+        <div class="view-head">
+          <div>
+            <p class="eyebrow">randomBytes / encrypt / decrypt</p>
+            <h1 id="crypto-title">Random &amp; symmetric crypto</h1>
+            <p class="view-copy">
+              OpenBao is remote and Credo's <code>randomBytes</code> is synchronous, so both operations intentionally
+              route to the Node.js backend. This shows Credo's multi-backend KMS routing in action.
+            </p>
+          </div>
+        </div>
+
+        <div class="grid two">
+          <article class="card">
+            <div class="card-head">
+              <h2>Random bytes</h2>
+              <span class="badge blue">node backend</span>
+            </div>
+            <div class="form-grid compact">
+              <label class="field">
+                <span>Length</span>
+                <input id="random-length" type="number" min="1" max="1024" value="32" />
+              </label>
+              <div class="field actions-field">
+                <span>&nbsp;</span>
+                <button class="btn primary" id="do-random" type="button">Generate</button>
+              </div>
+            </div>
+            <div class="kv" id="random-result"><span class="muted">No random bytes generated yet.</span></div>
+          </article>
+
+          <article class="card">
+            <div class="card-head">
+              <h2>AES-256-GCM</h2>
+              <span class="badge blue">node backend</span>
+            </div>
+            <label class="field">
+              <span>Plaintext</span>
+              <textarea id="crypto-plaintext" rows="3" spellcheck="false">
+OpenBao keeps my signing keys, Node keeps this secret.</textarea>
+            </label>
+            <div class="button-row">
+              <button class="btn primary" id="do-encrypt" type="button">Encrypt</button>
+              <button class="btn" id="do-decrypt" type="button" disabled>Decrypt</button>
+            </div>
+            <div class="kv" id="crypto-result">
+              <span class="muted">Encrypt a message to see the IV, tag and ciphertext.</span>
+            </div>
+          </article>
+        </div>
+      </section>
+
+      <!-- DIDs -->
+      <section class="view" id="view-dids" aria-labelledby="dids-title">
+        <div class="view-head">
+          <div>
+            <p class="eyebrow">did:key / did:jwk / did:peer</p>
+            <h1 id="dids-title">DIDs</h1>
+            <p class="view-copy">
+              Create a DID whose verification method is backed by a key in OpenBao. The DID record is persisted in
+              SQLite by Drizzle storage.
+            </p>
+          </div>
+        </div>
+
+        <article class="card">
+          <div class="form-grid">
+            <label class="field">
+              <span>Key</span>
+              <select id="did-key"></select>
+            </label>
+            <label class="field">
+              <span>DID method</span>
+              <select id="did-method">
+                <option value="key">did:key</option>
+                <option value="jwk">did:jwk</option>
+                <option value="peer">did:peer</option>
+              </select>
+            </label>
+            <div class="field actions-field">
+              <span>&nbsp;</span>
+              <button class="btn primary" id="do-create-did" type="button">Create DID</button>
+            </div>
+          </div>
+          <div class="result-block" id="did-result">
+            <span class="muted">Create a DID to see its DID document.</span>
+          </div>
+        </article>
+
+        <article class="card">
+          <div class="card-head">
+            <h2>Persisted DIDs</h2>
+            <button class="btn ghost small" id="load-dids" type="button">Refresh</button>
+          </div>
+          <div class="table-wrap">
+            <table class="table" id="dids-table">
+              <thead>
+                <tr>
+                  <th>DID</th>
+                  <th>Role</th>
+                  <th>Keys</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td colspan="3" class="muted">Open this section to load DIDs.</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </article>
+      </section>
+
+      <!-- X.509 -->
+      <section class="view" id="view-x509" aria-labelledby="x509-title">
+        <div class="view-head">
+          <div>
+            <p class="eyebrow">X509Service / createCertificate / validateCertificateChain</p>
+            <h1 id="x509-title">X.509 issuer &amp; holder</h1>
+            <p class="view-copy">
+              Generates a P-256 CA and leaf key, imports both into OpenBao, issues a self-signed CA certificate and a
+              leaf certificate, validates the chain, then signs a credential payload with the leaf key.
+            </p>
+          </div>
+        </div>
+
+        <article class="card">
+          <div class="button-row">
+            <button class="btn primary" id="run-x509" type="button">Run CA + leaf demo</button>
+            <span class="muted">Two keys are imported into OpenBao and tracked below.</span>
+          </div>
+          <div class="checks" id="x509-checks"></div>
+        </article>
+
+        <div class="grid two" id="x509-certs" hidden>
+          <article class="card">
+            <div class="card-head">
+              <h2>Root CA</h2>
+              <button class="btn ghost small" data-copy="x509-ca-pem" type="button">Copy PEM</button>
+            </div>
+            <div class="kv" id="x509-ca-meta"></div>
+            <pre class="pem" id="x509-ca-pem"></pre>
+          </article>
+          <article class="card">
+            <div class="card-head">
+              <h2>Leaf certificate</h2>
+              <button class="btn ghost small" data-copy="x509-leaf-pem" type="button">Copy PEM</button>
+            </div>
+            <div class="kv" id="x509-leaf-meta"></div>
+            <pre class="pem" id="x509-leaf-pem"></pre>
+          </article>
+        </div>
+
+        <article class="card" id="x509-credential-card" hidden>
+          <div class="card-head">
+            <h2>Credential signed by the leaf key</h2>
+            <span class="badge ok">ES256</span>
+          </div>
+          <div class="kv" id="x509-credential"></div>
+        </article>
+      </section>
+
+      <!-- Activity -->
+      <section class="view" id="view-activity" aria-labelledby="activity-title">
+        <div class="view-head">
+          <div>
+            <p class="eyebrow">HTTP request log</p>
+            <h1 id="activity-title">Activity</h1>
+            <p class="view-copy">Every request this page makes to the dev agent, including status and latency.</p>
+          </div>
+          <button class="btn ghost" id="clear-activity" type="button">Clear log</button>
+        </div>
+        <article class="card">
+          <div class="table-wrap">
+            <table class="table" id="activity-table">
+              <thead>
+                <tr>
+                  <th>Time</th>
+                  <th>Method</th>
+                  <th>Path</th>
+                  <th>Status</th>
+                  <th>Latency</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td colspan="5" class="muted">No requests yet.</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </article>
+      </section>
+    </main>
+
+    <dialog id="json-dialog" class="json-dialog">
+      <div class="dialog-head">
+        <h2 id="json-dialog-title">JSON</h2>
+        <div class="button-row">
+          <button class="btn ghost small" id="json-copy" type="button">Copy</button>
+          <button class="btn ghost small" id="json-close" type="button">Close</button>
+        </div>
+      </div>
+      <pre id="json-dialog-body"></pre>
+    </dialog>
+
+    <div class="toasts" id="toasts" aria-live="polite"></div>
+
+    <script src="./app.js" type="module"></script>
+  </body>
+</html>

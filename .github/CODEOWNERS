@@ -1,0 +1,8 @@
+# CODEOWNERS for credo-ts-openbao
+#
+# https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/about-code-owners
+#
+# AyanWorks owns every path in this repository. Add more specific rules below
+# as the project grows (for example, a team for the OpenBao client).
+
+* @AyanWorks

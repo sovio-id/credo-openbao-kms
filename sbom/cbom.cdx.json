@@ -1,0 +1,2029 @@
+{
+  "bomFormat": "CycloneDX",
+  "specVersion": "1.6",
+  "version": 1,
+  "metadata": {
+    "component": {
+      "type": "library",
+      "name": "credo-ts-openbao",
+      "version": "0.1.0",
+      "bom-ref": "credo-ts-openbao@0.1.0",
+      "description": "OpenBao Transit key management backend for Credo (KMS plug-in)",
+      "licenses": [
+        {
+          "license": {
+            "id": "Apache-2.0",
+            "acknowledgement": "declared"
+          }
+        }
+      ],
+      "purl": "pkg:npm/credo-ts-openbao@0.1.0",
+      "properties": [
+        {
+          "name": "cdx:npm:package:path",
+          "value": ""
+        }
+      ]
+    },
+    "tools": {
+      "components": [
+        {
+          "type": "application",
+          "name": "credo-ts-openbao-cbom-generator",
+          "version": "1.0.0"
+        },
+        {
+          "type": "application",
+          "name": "credo-ts-openbao-bom-finalizer",
+          "version": "1.0.0"
+        }
+      ]
+    },
+    "lifecycles": [
+      {
+        "phase": "build"
+      }
+    ],
+    "timestamp": "2026-11-05T21:23:17.000Z",
+    "properties": [
+      {
+        "name": "bom:generator",
+        "value": "credo-ts-openbao-bom-finalizer"
+      },
+      {
+        "name": "bom:generator:version",
+        "value": "1.0.0"
+      },
+      {
+        "name": "bom:git:commit",
+        "value": "6ce52e9a461f199f297e7226a04633ddfc972aa8"
+      },
+      {
+        "name": "bom:git:repository",
+        "value": "https://github.com/sovio-id/credo-ts-openbao"
+      },
+      {
+        "name": "bom:package-lock:sha256",
+        "value": "92285f92b7d51285f67a162dc06fb68c8ec88e08632ca224827f29c18c695ed7"
+      },
+      {
+        "name": "bom:crypto-inventory:sha256",
+        "value": "5f451fe45e7e3efe7a0e9f1a23d35d1e8397139e0887b1f0e8b20248ea081343"
+      }
+    ]
+  },
+  "components": [
+    {
+      "type": "cryptographic-asset",
+      "bom-ref": "crypto/algorithm/ed25519",
+      "name": "Ed25519",
+      "description": "Edwards-curve signature algorithm used for EdDSA keys and DID documents. Keys are generated and used inside OpenBao Transit; signatures are verified locally with node:crypto.",
+      "cryptoProperties": {
+        "assetType": "algorithm",
+        "oid": "1.3.101.112",
+        "algorithmProperties": {
+          "primitive": "signature",
+          "parameterSetIdentifier": "Ed25519",
+          "curve": "Ed25519",
+          "executionEnvironment": "software-plain-ram",
+          "implementationPlatform": "generic",
+          "certificationLevel": [
+            "none"
+          ],
+          "cryptoFunctions": [
+            "keygen",
+            "sign",
+            "verify"
+          ],
+          "classicalSecurityLevel": 128
+        }
+      },
+      "evidence": {
+        "occurrences": [
+          {
+            "location": "src/OpenBaoClient.ts",
+            "line": 96,
+            "additionalContext": "| 'ed25519'"
+          },
+          {
+            "location": "src/OpenBaoClient.ts",
+            "line": 126,
+            "additionalContext": "/** Transit hash algorithm, e.g. `sha2-256`. Omitted for Ed25519. */"
+          },
+          {
+            "location": "src/OpenBaoKeyManagementService.ts",
+            "line": 94,
+            "additionalContext": "EdDSA: { nodeHash: null },"
+          },
+          {
+            "location": "src/OpenBaoKeyManagementService.ts",
+            "line": 156,
+            "additionalContext": "* Ed25519, P-256, P-384, P-521 and RSA keys are created, imported and signed"
+          },
+          {
+            "location": "src/OpenBaoKeyManagementService.ts",
+            "line": 355,
+            "additionalContext": "* Ed25519, P-256/384/521 and RSA keys use Transit's BYOK endpoint and never"
+          },
+          {
+            "location": "src/OpenBaoKeyManagementService.ts",
+            "line": 586,
+            "additionalContext": "return type.crv === 'Ed25519' ? 'ed25519' : undefined"
+          },
+          {
+            "location": "src/OpenBaoKeyManagementService.ts",
+            "line": 621,
+            "additionalContext": "return jwk.crv === 'Ed25519' ? 'ed25519' : undefined"
+          },
+          {
+            "location": "src/OpenBaoKeyManagementService.ts",
+            "line": 670,
+            "additionalContext": "if (key.type === 'ed25519') {"
+          },
+          {
+            "location": "src/OpenBaoKeyManagementService.ts",
+            "line": 671,
+            "additionalContext": "// Transit returns Ed25519 public keys as base64 of the raw 32 bytes."
+          },
+          {
+            "location": "src/OpenBaoKeyManagementService.ts",
+            "line": 674,
+            "additionalContext": "crv: 'Ed25519',"
+          },
+          {
+            "location": "src/OpenBaoKeyManagementService.ts",
+            "line": 733,
+            "additionalContext": "// Ed25519: no separate hash."
+          }
+        ]
+      }
+    },
+    {
+      "type": "cryptographic-asset",
+      "bom-ref": "crypto/algorithm/ecdsa-p256",
+      "name": "ECDSA P-256",
+      "description": "NIST P-256 ECDSA signatures used for ES256 and DID keys. Generated and used inside OpenBao Transit; signatures are verified locally with node:crypto.",
+      "cryptoProperties": {
+        "assetType": "algorithm",
+        "oid": "1.2.840.10045.3.1.7",
+        "algorithmProperties": {
+          "primitive": "signature",
+          "parameterSetIdentifier": "P-256",
+          "curve": "P-256",
+          "executionEnvironment": "software-plain-ram",
+          "implementationPlatform": "generic",
+          "certificationLevel": [
+            "none"
+          ],
+          "cryptoFunctions": [
+            "keygen",
+            "sign",
+            "verify"
+          ],
+          "classicalSecurityLevel": 128
+        }
+      },
+      "evidence": {
+        "occurrences": [
+          {
+            "location": "src/OpenBaoClient.ts",
+            "line": 97,
+            "additionalContext": "| 'ecdsa-p256'"
+          },
+          {
+            "location": "src/OpenBaoKeyManagementService.ts",
+            "line": 95,
+            "additionalContext": "ES256: { nodeHash: 'sha256', transitHash: 'sha2-256', marshaling: 'jws' },"
+          },
+          {
+            "location": "src/OpenBaoKeyManagementService.ts",
+            "line": 156,
+            "additionalContext": "* Ed25519, P-256, P-384, P-521 and RSA keys are created, imported and signed"
+          },
+          {
+            "location": "src/OpenBaoKeyManagementService.ts",
+            "line": 355,
+            "additionalContext": "* Ed25519, P-256/384/521 and RSA keys use Transit's BYOK endpoint and never"
+          },
+          {
+            "location": "src/OpenBaoKeyManagementService.ts",
+            "line": 572,
+            "additionalContext": "case 'P-256':"
+          },
+          {
+            "location": "src/OpenBaoKeyManagementService.ts",
+            "line": 573,
+            "additionalContext": "return 'ecdsa-p256'"
+          },
+          {
+            "location": "src/OpenBaoKeyManagementService.ts",
+            "line": 607,
+            "additionalContext": "case 'P-256':"
+          },
+          {
+            "location": "src/OpenBaoKeyManagementService.ts",
+            "line": 608,
+            "additionalContext": "return 'ecdsa-p256'"
+          }
+        ]
+      }
+    },
+    {
+      "type": "cryptographic-asset",
+      "bom-ref": "crypto/algorithm/ecdsa-p384",
+      "name": "ECDSA P-384",
+      "description": "NIST P-384 ECDSA signatures used for ES384 and DID keys. Generated and used inside OpenBao Transit; signatures are verified locally with node:crypto.",
+      "cryptoProperties": {
+        "assetType": "algorithm",
+        "oid": "1.3.132.0.34",
+        "algorithmProperties": {
+          "primitive": "signature",
+          "parameterSetIdentifier": "P-384",
+          "curve": "P-384",
+          "executionEnvironment": "software-plain-ram",
+          "implementationPlatform": "generic",
+          "certificationLevel": [
+            "none"
+          ],
+          "cryptoFunctions": [
+            "keygen",
+            "sign",
+            "verify"
+          ],
+          "classicalSecurityLevel": 192
+        }
+      },
+      "evidence": {
+        "occurrences": [
+          {
+            "location": "src/OpenBaoClient.ts",
+            "line": 98,
+            "additionalContext": "| 'ecdsa-p384'"
+          },
+          {
+            "location": "src/OpenBaoKeyManagementService.ts",
+            "line": 96,
+            "additionalContext": "ES384: { nodeHash: 'sha384', transitHash: 'sha2-384', marshaling: 'jws' },"
+          },
+          {
+            "location": "src/OpenBaoKeyManagementService.ts",
+            "line": 156,
+            "additionalContext": "* Ed25519, P-256, P-384, P-521 and RSA keys are created, imported and signed"
+          },
+          {
+            "location": "src/OpenBaoKeyManagementService.ts",
+            "line": 574,
+            "additionalContext": "case 'P-384':"
+          },
+          {
+            "location": "src/OpenBaoKeyManagementService.ts",
+            "line": 575,
+            "additionalContext": "return 'ecdsa-p384'"
+          },
+          {
+            "location": "src/OpenBaoKeyManagementService.ts",
+            "line": 609,
+            "additionalContext": "case 'P-384':"
+          },
+          {
+            "location": "src/OpenBaoKeyManagementService.ts",
+            "line": 610,
+            "additionalContext": "return 'ecdsa-p384'"
+          }
+        ]
+      }
+    },
+    {
+      "type": "cryptographic-asset",
+      "bom-ref": "crypto/algorithm/ecdsa-p521",
+      "name": "ECDSA P-521",
+      "description": "NIST P-521 ECDSA signatures used for ES512 and DID keys. Generated and used inside OpenBao Transit; signatures are verified locally with node:crypto.",
+      "cryptoProperties": {
+        "assetType": "algorithm",
+        "oid": "1.3.132.0.35",
+        "algorithmProperties": {
+          "primitive": "signature",
+          "parameterSetIdentifier": "P-521",
+          "curve": "P-521",
+          "executionEnvironment": "software-plain-ram",
+          "implementationPlatform": "generic",
+          "certificationLevel": [
+            "none"
+          ],
+          "cryptoFunctions": [
+            "keygen",
+            "sign",
+            "verify"
+          ],
+          "classicalSecurityLevel": 256
+        }
+      },
+      "evidence": {
+        "occurrences": [
+          {
+            "location": "src/OpenBaoClient.ts",
+            "line": 99,
+            "additionalContext": "| 'ecdsa-p521'"
+          },
+          {
+            "location": "src/OpenBaoKeyManagementService.ts",
+            "line": 97,
+            "additionalContext": "ES512: { nodeHash: 'sha512', transitHash: 'sha2-512', marshaling: 'jws' },"
+          },
+          {
+            "location": "src/OpenBaoKeyManagementService.ts",
+            "line": 156,
+            "additionalContext": "* Ed25519, P-256, P-384, P-521 and RSA keys are created, imported and signed"
+          },
+          {
+            "location": "src/OpenBaoKeyManagementService.ts",
+            "line": 576,
+            "additionalContext": "case 'P-521':"
+          },
+          {
+            "location": "src/OpenBaoKeyManagementService.ts",
+            "line": 577,
+            "additionalContext": "return 'ecdsa-p521'"
+          },
+          {
+            "location": "src/OpenBaoKeyManagementService.ts",
+            "line": 611,
+            "additionalContext": "case 'P-521':"
+          },
+          {
+            "location": "src/OpenBaoKeyManagementService.ts",
+            "line": 612,
+            "additionalContext": "return 'ecdsa-p521'"
+          }
+        ]
+      }
+    },
+    {
+      "type": "cryptographic-asset",
+      "bom-ref": "crypto/algorithm/secp256k1",
+      "name": "secp256k1 ECDSA",
+      "description": "secp256k1 (ES256K) signatures for did:key, did:jwk and did:peer. Transit cannot represent this curve, so keys are stored in OpenBao KV v2 and signed in-process with @noble/curves.",
+      "cryptoProperties": {
+        "assetType": "algorithm",
+        "oid": "1.3.132.0.10",
+        "algorithmProperties": {
+          "primitive": "signature",
+          "parameterSetIdentifier": "secp256k1",
+          "curve": "secp256k1",
+          "executionEnvironment": "software-plain-ram",
+          "implementationPlatform": "generic",
+          "certificationLevel": [
+            "none"
+          ],
+          "cryptoFunctions": [
+            "keygen",
+            "sign",
+            "verify"
+          ],
+          "classicalSecurityLevel": 128
+        }
+      },
+      "evidence": {
+        "occurrences": [
+          {
+            "location": "src/OpenBaoClient.ts",
+            "line": 65,
+            "additionalContext": "* not exist. Used for key types Transit cannot represent (secp256k1, X25519)."
+          },
+          {
+            "location": "src/OpenBaoKeyManagementService.ts",
+            "line": 55,
+            "additionalContext": "import { generateSecp256k1KeyPair, signSecp256k1, verifySecp256k1 } from './secp256k1.js'"
+          },
+          {
+            "location": "src/OpenBaoKeyManagementService.ts",
+            "line": 104,
+            "additionalContext": "// secp256k1 (`did:ethr`, `did:key`). Transit has no such key type, so the"
+          },
+          {
+            "location": "src/OpenBaoKeyManagementService.ts",
+            "line": 106,
+            "additionalContext": "ES256K: { nodeHash: 'sha256', local: true },"
+          },
+          {
+            "location": "src/OpenBaoKeyManagementService.ts",
+            "line": 113,
+            "additionalContext": "type KvKeyType = 'secp256k1' | 'x25519'"
+          },
+          {
+            "location": "src/OpenBaoKeyManagementService.ts",
+            "line": 143,
+            "additionalContext": "* KV v2 mount used for key types Transit cannot represent (secp256k1 and"
+          },
+          {
+            "location": "src/OpenBaoKeyManagementService.ts",
+            "line": 157,
+            "additionalContext": "* inside the Transit secrets engine. secp256k1 and X25519 — which Transit"
+          },
+          {
+            "location": "src/OpenBaoKeyManagementService.ts",
+            "line": 158,
+            "additionalContext": "* cannot represent — can be stored in a KV v2 mount (`kvMount`); secp256k1 is"
+          },
+          {
+            "location": "src/OpenBaoKeyManagementService.ts",
+            "line": 231,
+            "additionalContext": "// Not in Transit. secp256k1/X25519 keys may live in the KV fallback."
+          },
+          {
+            "location": "src/OpenBaoKeyManagementService.ts",
+            "line": 356,
+            "additionalContext": "* travel in plaintext. secp256k1 and X25519 use the configured KV v2 mount;"
+          },
+          {
+            "location": "src/OpenBaoKeyManagementService.ts",
+            "line": 357,
+            "additionalContext": "* secp256k1 signatures are then produced in-process."
+          },
+          {
+            "location": "src/OpenBaoKeyManagementService.ts",
+            "line": 456,
+            "additionalContext": "// secp256k1 is generated with @noble/curves so the same code works on"
+          },
+          {
+            "location": "src/OpenBaoKeyManagementService.ts",
+            "line": 461,
+            "additionalContext": "if (keyType === 'secp256k1') {"
+          },
+          {
+            "location": "src/OpenBaoKeyManagementService.ts",
+            "line": 493,
+            "additionalContext": "if (record.keyType !== 'secp256k1') {"
+          },
+          {
+            "location": "src/OpenBaoKeyManagementService.ts",
+            "line": 526,
+            "additionalContext": "(data.keyType !== 'secp256k1' && data.keyType !== 'x25519') ||"
+          },
+          {
+            "location": "src/OpenBaoKeyManagementService.ts",
+            "line": 578,
+            "additionalContext": "// Transit has no secp256k1 key type; stored in KV when configured."
+          },
+          {
+            "location": "src/OpenBaoKeyManagementService.ts",
+            "line": 579,
+            "additionalContext": "case 'secp256k1':"
+          },
+          {
+            "location": "src/OpenBaoKeyManagementService.ts",
+            "line": 613,
+            "additionalContext": "// Transit cannot import secp256k1 key material."
+          },
+          {
+            "location": "src/OpenBaoKeyManagementService.ts",
+            "line": 653,
+            "additionalContext": "if (type.kty === 'EC' && type.crv === 'secp256k1') return 'secp256k1'"
+          },
+          {
+            "location": "src/OpenBaoKeyManagementService.ts",
+            "line": 659,
+            "additionalContext": "if (jwk.kty === 'EC' && jwk.crv === 'secp256k1') return 'secp256k1'"
+          },
+          {
+            "location": "src/OpenBaoKeyManagementService.ts",
+            "line": 723,
+            "additionalContext": "// node:crypto cannot handle secp256k1 on every runtime, so verification of"
+          },
+          {
+            "location": "src/OpenBaoKeyManagementService.ts",
+            "line": 725,
+            "additionalContext": "if (jwk.kty === 'EC' && jwk.crv === 'secp256k1') {"
+          },
+          {
+            "location": "src/secp256k1.ts",
+            "line": 18,
+            "additionalContext": "import { secp256k1 } from '@noble/curves/secp256k1.js'"
+          },
+          {
+            "location": "src/secp256k1.ts",
+            "line": 21,
+            "additionalContext": "* Minimal JWK-level helpers for secp256k1."
+          },
+          {
+            "location": "src/secp256k1.ts",
+            "line": 23,
+            "additionalContext": "* Transit cannot represent secp256k1, so the KV fallback has to create, sign,"
+          },
+          {
+            "location": "src/secp256k1.ts",
+            "line": 24,
+            "additionalContext": "* and verify these keys in-process. `node:crypto` supports secp256k1 on Node.js"
+          },
+          {
+            "location": "src/secp256k1.ts",
+            "line": 45,
+            "additionalContext": "const privateKey = secp256k1.utils.randomSecretKey()"
+          },
+          {
+            "location": "src/secp256k1.ts",
+            "line": 46,
+            "additionalContext": "const publicKey = secp256k1.getPublicKey(privateKey, false)"
+          },
+          {
+            "location": "src/secp256k1.ts",
+            "line": 54,
+            "additionalContext": "crv: 'secp256k1',"
+          },
+          {
+            "location": "src/secp256k1.ts",
+            "line": 61,
+            "additionalContext": "crv: 'secp256k1',"
+          },
+          {
+            "location": "src/secp256k1.ts",
+            "line": 70,
+            "additionalContext": "* Sign data with ES256K. `@noble/curves` hashes the message with SHA-256 by"
+          },
+          {
+            "location": "src/secp256k1.ts",
+            "line": 76,
+            "additionalContext": "throw new Error(\"The secp256k1 private JWK does not contain a 'd' parameter\")"
+          },
+          {
+            "location": "src/secp256k1.ts",
+            "line": 79,
+            "additionalContext": "const signature = secp256k1.sign(data, decodeBase64Url(d))"
+          },
+          {
+            "location": "src/secp256k1.ts",
+            "line": 84,
+            "additionalContext": "* Verify an ES256K signature against a secp256k1 public JWK."
+          },
+          {
+            "location": "src/secp256k1.ts",
+            "line": 99,
+            "additionalContext": "return secp256k1.verify(signature, data, publicKey, { lowS: false })"
+          }
+        ]
+      }
+    },
+    {
+      "type": "cryptographic-asset",
+      "bom-ref": "crypto/algorithm/x25519",
+      "name": "X25519",
+      "description": "Curve25519 Diffie-Hellman key type used for DID key agreement. Transit cannot represent it, so key pairs are generated with node:crypto and stored in OpenBao KV v2. Credo 0.7 does not expose a key-agreement operation to this backend.",
+      "cryptoProperties": {
+        "assetType": "algorithm",
+        "oid": "1.3.101.110",
+        "algorithmProperties": {
+          "primitive": "key-agree",
+          "parameterSetIdentifier": "X25519",
+          "curve": "curve25519",
+          "executionEnvironment": "software-plain-ram",
+          "implementationPlatform": "generic",
+          "certificationLevel": [
+            "none"
+          ],
+          "cryptoFunctions": [
+            "keygen"
+          ],
+          "classicalSecurityLevel": 128
+        }
+      },
+      "evidence": {
+        "occurrences": [
+          {
+            "location": "src/OpenBaoClient.ts",
+            "line": 65,
+            "additionalContext": "* not exist. Used for key types Transit cannot represent (secp256k1, X25519)."
+          },
+          {
+            "location": "src/OpenBaoKeyManagementService.ts",
+            "line": 113,
+            "additionalContext": "type KvKeyType = 'secp256k1' | 'x25519'"
+          },
+          {
+            "location": "src/OpenBaoKeyManagementService.ts",
+            "line": 144,
+            "additionalContext": "* X25519). Leave unset to route those key types to another backend such as"
+          },
+          {
+            "location": "src/OpenBaoKeyManagementService.ts",
+            "line": 157,
+            "additionalContext": "* inside the Transit secrets engine. secp256k1 and X25519 — which Transit"
+          },
+          {
+            "location": "src/OpenBaoKeyManagementService.ts",
+            "line": 231,
+            "additionalContext": "// Not in Transit. secp256k1/X25519 keys may live in the KV fallback."
+          },
+          {
+            "location": "src/OpenBaoKeyManagementService.ts",
+            "line": 356,
+            "additionalContext": "* travel in plaintext. secp256k1 and X25519 use the configured KV v2 mount;"
+          },
+          {
+            "location": "src/OpenBaoKeyManagementService.ts",
+            "line": 458,
+            "additionalContext": "// X25519 uses node:crypto, which supports it everywhere we target."
+          },
+          {
+            "location": "src/OpenBaoKeyManagementService.ts",
+            "line": 466,
+            "additionalContext": "const { privateKey, publicKey } = generateKeyPairSync('x25519')"
+          },
+          {
+            "location": "src/OpenBaoKeyManagementService.ts",
+            "line": 526,
+            "additionalContext": "(data.keyType !== 'secp256k1' && data.keyType !== 'x25519') ||"
+          },
+          {
+            "location": "src/OpenBaoKeyManagementService.ts",
+            "line": 585,
+            "additionalContext": "// Transit has no X25519 key type; stored in KV when configured."
+          },
+          {
+            "location": "src/OpenBaoKeyManagementService.ts",
+            "line": 620,
+            "additionalContext": "// X25519 is not a signing key and Transit has no such key type."
+          },
+          {
+            "location": "src/OpenBaoKeyManagementService.ts",
+            "line": 654,
+            "additionalContext": "if (type.kty === 'OKP' && type.crv === 'X25519') return 'x25519'"
+          },
+          {
+            "location": "src/OpenBaoKeyManagementService.ts",
+            "line": 660,
+            "additionalContext": "if (jwk.kty === 'OKP' && jwk.crv === 'X25519') return 'x25519'"
+          }
+        ]
+      }
+    },
+    {
+      "type": "cryptographic-asset",
+      "bom-ref": "crypto/algorithm/rsa-2048",
+      "name": "RSA-2048 (PKCS#1 v1.5)",
+      "description": "RSA-2048 signatures used for RS256/RS384/RS512 and X.509 chains. Keys are generated, imported and used inside OpenBao Transit; signatures are verified locally with node:crypto.",
+      "cryptoProperties": {
+        "assetType": "algorithm",
+        "oid": "1.2.840.113549.1.1.1",
+        "algorithmProperties": {
+          "primitive": "signature",
+          "parameterSetIdentifier": "RSA-2048",
+          "executionEnvironment": "software-plain-ram",
+          "implementationPlatform": "generic",
+          "certificationLevel": [
+            "none"
+          ],
+          "padding": "pkcs1v15",
+          "cryptoFunctions": [
+            "keygen",
+            "sign",
+            "verify"
+          ],
+          "classicalSecurityLevel": 112
+        }
+      },
+      "evidence": {
+        "occurrences": [
+          {
+            "location": "src/OpenBaoClient.ts",
+            "line": 100,
+            "additionalContext": "| 'rsa-2048'"
+          },
+          {
+            "location": "src/OpenBaoKeyManagementService.ts",
+            "line": 633,
+            "additionalContext": "return 'rsa-2048'"
+          },
+          {
+            "location": "src/transitImport.ts",
+            "line": 111,
+            "additionalContext": "/** RSA modulus length in bits, as required to choose `rsa-2048/3072/4096`. */"
+          }
+        ]
+      }
+    },
+    {
+      "type": "cryptographic-asset",
+      "bom-ref": "crypto/algorithm/rsa-3072",
+      "name": "RSA-3072 (PKCS#1 v1.5)",
+      "description": "RSA-3072 signatures used for RS256/RS384/RS512 and X.509 chains. Keys are generated, imported and used inside OpenBao Transit; signatures are verified locally with node:crypto.",
+      "cryptoProperties": {
+        "assetType": "algorithm",
+        "oid": "1.2.840.113549.1.1.1",
+        "algorithmProperties": {
+          "primitive": "signature",
+          "parameterSetIdentifier": "RSA-3072",
+          "executionEnvironment": "software-plain-ram",
+          "implementationPlatform": "generic",
+          "certificationLevel": [
+            "none"
+          ],
+          "padding": "pkcs1v15",
+          "cryptoFunctions": [
+            "keygen",
+            "sign",
+            "verify"
+          ],
+          "classicalSecurityLevel": 128
+        }
+      },
+      "evidence": {
+        "occurrences": [
+          {
+            "location": "src/OpenBaoClient.ts",
+            "line": 101,
+            "additionalContext": "| 'rsa-3072'"
+          },
+          {
+            "location": "src/OpenBaoKeyManagementService.ts",
+            "line": 635,
+            "additionalContext": "return 'rsa-3072'"
+          }
+        ]
+      }
+    },
+    {
+      "type": "cryptographic-asset",
+      "bom-ref": "crypto/algorithm/rsa-4096",
+      "name": "RSA-4096 (PKCS#1 v1.5)",
+      "description": "RSA-4096 signatures used for RS256/RS384/RS512 and X.509 chains. Keys are generated, imported and used inside OpenBao Transit; signatures are verified locally with node:crypto.",
+      "cryptoProperties": {
+        "assetType": "algorithm",
+        "oid": "1.2.840.113549.1.1.1",
+        "algorithmProperties": {
+          "primitive": "signature",
+          "parameterSetIdentifier": "RSA-4096",
+          "executionEnvironment": "software-plain-ram",
+          "implementationPlatform": "generic",
+          "certificationLevel": [
+            "none"
+          ],
+          "padding": "pkcs1v15",
+          "cryptoFunctions": [
+            "keygen",
+            "sign",
+            "verify"
+          ],
+          "classicalSecurityLevel": 152
+        }
+      },
+      "evidence": {
+        "occurrences": [
+          {
+            "location": "src/OpenBaoClient.ts",
+            "line": 59,
+            "additionalContext": "/** RSA-4096 public key (PEM) used to wrap key material for BYOK import. */"
+          },
+          {
+            "location": "src/OpenBaoClient.ts",
+            "line": 102,
+            "additionalContext": "| 'rsa-4096'"
+          },
+          {
+            "location": "src/OpenBaoKeyManagementService.ts",
+            "line": 637,
+            "additionalContext": "return 'rsa-4096'"
+          },
+          {
+            "location": "src/transitImport.ts",
+            "line": 23,
+            "additionalContext": "* key is wrapped with the server's RSA-4096 wrapping key using RSA-OAEP. The"
+          }
+        ]
+      }
+    },
+    {
+      "type": "cryptographic-asset",
+      "bom-ref": "crypto/algorithm/rsa-pss",
+      "name": "RSASSA-PSS (RSA-2048/3072/4096)",
+      "description": "RSA-PSS signatures used for PS256/PS384/PS512. The backend sets salt_length=hash so JWA-compliant verifiers accept the signatures.",
+      "cryptoProperties": {
+        "assetType": "algorithm",
+        "oid": "1.2.840.113549.1.1.10",
+        "algorithmProperties": {
+          "primitive": "signature",
+          "parameterSetIdentifier": "RSASSA-PSS with RSA-2048/3072/4096",
+          "executionEnvironment": "software-plain-ram",
+          "implementationPlatform": "generic",
+          "certificationLevel": [
+            "none"
+          ],
+          "padding": "other",
+          "cryptoFunctions": [
+            "keygen",
+            "sign",
+            "verify"
+          ]
+        }
+      },
+      "properties": [
+        {
+          "name": "credo:crypto:padding",
+          "value": "RSASSA-PSS, salt length equal to the hash length"
+        }
+      ],
+      "evidence": {
+        "occurrences": [
+          {
+            "location": "src/OpenBaoClient.ts",
+            "line": 131,
+            "additionalContext": "signatureAlgorithm?: 'pss' | 'pkcs1v15'"
+          },
+          {
+            "location": "src/OpenBaoClient.ts",
+            "line": 229,
+            "additionalContext": "if (options.saltLength) body.salt_length = options.saltLength"
+          },
+          {
+            "location": "src/OpenBaoKeyManagementService.ts",
+            "line": 75,
+            "additionalContext": "signatureAlgorithm?: 'pss' | 'pkcs1v15'"
+          },
+          {
+            "location": "src/OpenBaoKeyManagementService.ts",
+            "line": 90,
+            "additionalContext": "* RSA PSS uses `salt_length=hash` because JWA requires the salt length to"
+          },
+          {
+            "location": "src/OpenBaoKeyManagementService.ts",
+            "line": 101,
+            "additionalContext": "PS256: { nodeHash: 'sha256', transitHash: 'sha2-256', signatureAlgorithm: 'pss', saltLength: 'hash' },"
+          },
+          {
+            "location": "src/OpenBaoKeyManagementService.ts",
+            "line": 102,
+            "additionalContext": "PS384: { nodeHash: 'sha384', transitHash: 'sha2-384', signatureAlgorithm: 'pss', saltLength: 'hash' },"
+          },
+          {
+            "location": "src/OpenBaoKeyManagementService.ts",
+            "line": 103,
+            "additionalContext": "PS512: { nodeHash: 'sha512', transitHash: 'sha2-512', signatureAlgorithm: 'pss', saltLength: 'hash' },"
+          },
+          {
+            "location": "src/OpenBaoKeyManagementService.ts",
+            "line": 737,
+            "additionalContext": "if (algorithm.signatureAlgorithm === 'pss') {"
+          }
+        ]
+      }
+    },
+    {
+      "type": "cryptographic-asset",
+      "bom-ref": "crypto/algorithm/rsa-oaep-256",
+      "name": "RSA-OAEP-256 (RSA-4096)",
+      "description": "RSA-OAEP with SHA-256 and MGF1-SHA-256 used to wrap the ephemeral AES key during Transit BYOK import. The wrapping key is always the server's RSA-4096 key.",
+      "cryptoProperties": {
+        "assetType": "algorithm",
+        "oid": "1.2.840.113549.1.1.7",
+        "algorithmProperties": {
+          "primitive": "pke",
+          "parameterSetIdentifier": "RSA-4096 with SHA-256 and MGF1-SHA-256",
+          "executionEnvironment": "software-plain-ram",
+          "implementationPlatform": "generic",
+          "certificationLevel": [
+            "none"
+          ],
+          "padding": "oaep",
+          "cryptoFunctions": [
+            "encrypt",
+            "decrypt"
+          ],
+          "classicalSecurityLevel": 152
+        }
+      },
+      "evidence": {
+        "occurrences": [
+          {
+            "location": "src/OpenBaoClient.ts",
+            "line": 77,
+            "additionalContext": "* `base64(RSA-OAEP(ephemeralAesKey) || AES-KWP(privateKeyPkcs8))`."
+          },
+          {
+            "location": "src/OpenBaoClient.ts",
+            "line": 83,
+            "additionalContext": "/** Hash used for RSA-OAEP. Defaults to `SHA256`, matching the wrapper here. */"
+          },
+          {
+            "location": "src/transitImport.ts",
+            "line": 23,
+            "additionalContext": "* key is wrapped with the server's RSA-4096 wrapping key using RSA-OAEP. The"
+          },
+          {
+            "location": "src/transitImport.ts",
+            "line": 26,
+            "additionalContext": "*     base64( RSA-OAEP(ephemeralAesKey) || AES-KWP(pkcs8) )"
+          },
+          {
+            "location": "src/transitImport.ts",
+            "line": 28,
+            "additionalContext": "* with the RSA-OAEP part always exactly 512 bytes (`EncryptedKeyBytes` in"
+          },
+          {
+            "location": "src/transitImport.ts",
+            "line": 132,
+            "additionalContext": "padding: constants.RSA_PKCS1_OAEP_PADDING,"
+          },
+          {
+            "location": "src/transitImport.ts",
+            "line": 133,
+            "additionalContext": "oaepHash: 'sha256',"
+          }
+        ]
+      }
+    },
+    {
+      "type": "cryptographic-asset",
+      "bom-ref": "crypto/algorithm/aes-256-kwp",
+      "name": "AES-256 Key Wrap with Padding (RFC 5649)",
+      "description": "AES Key Wrap with Padding used to wrap PKCS#8 private key material for Transit BYOK import. Implemented in src/aesKeyWrap.ts and unwrapped by OpenBao Transit.",
+      "cryptoProperties": {
+        "assetType": "algorithm",
+        "oid": "2.16.840.1.101.3.4.1.45",
+        "algorithmProperties": {
+          "primitive": "other",
+          "parameterSetIdentifier": "AES-256",
+          "executionEnvironment": "software-plain-ram",
+          "implementationPlatform": "generic",
+          "certificationLevel": [
+            "none"
+          ],
+          "mode": "other",
+          "cryptoFunctions": [
+            "encrypt",
+            "decrypt"
+          ],
+          "classicalSecurityLevel": 256
+        }
+      },
+      "properties": [
+        {
+          "name": "credo:crypto:primitive",
+          "value": "key-wrap (RFC 5649)"
+        }
+      ],
+      "evidence": {
+        "occurrences": [
+          {
+            "location": "src/aesKeyWrap.ts",
+            "line": 19,
+            "additionalContext": "* AES Key Wrap with Padding (RFC 5649)."
+          },
+          {
+            "location": "src/aesKeyWrap.ts",
+            "line": 52,
+            "additionalContext": "* Wrap `plaintext` with the RFC 5649 AES Key Wrap with Padding algorithm."
+          },
+          {
+            "location": "src/aesKeyWrap.ts",
+            "line": 55,
+            "additionalContext": "export function aesKeyWrapPad(kek: Uint8Array, plaintext: Uint8Array): Buffer {"
+          },
+          {
+            "location": "src/aesKeyWrap.ts",
+            "line": 58,
+            "additionalContext": "if (data.length === 0) throw new Error('AES-KWP cannot wrap empty data')"
+          },
+          {
+            "location": "src/aesKeyWrap.ts",
+            "line": 59,
+            "additionalContext": "if (data.length > 0xffff_ffff) throw new Error('AES-KWP input is too large')"
+          },
+          {
+            "location": "src/aesKeyWrap.ts",
+            "line": 73,
+            "additionalContext": "// RFC 5649 §4.1: a single block is encrypted as one AES block, without the"
+          },
+          {
+            "location": "src/aesKeyWrap.ts",
+            "line": 77,
+            "additionalContext": "if (!onlyBlock) throw new Error('AES-KWP internal error')"
+          },
+          {
+            "location": "src/aesKeyWrap.ts",
+            "line": 84,
+            "additionalContext": "if (!block) throw new Error('AES-KWP internal error')"
+          },
+          {
+            "location": "src/aesKeyWrap.ts",
+            "line": 95,
+            "additionalContext": "* Unwrap data produced by {@link aesKeyWrapPad}. Used by the RFC 5649 test"
+          },
+          {
+            "location": "src/aesKeyWrap.ts",
+            "line": 101,
+            "additionalContext": "if (data.length % 8 !== 0 || data.length < 16) throw new Error('Invalid AES-KWP ciphertext length')"
+          },
+          {
+            "location": "src/aesKeyWrap.ts",
+            "line": 112,
+            "additionalContext": "if (!onlyBlock) throw new Error('AES-KWP internal error')"
+          },
+          {
+            "location": "src/aesKeyWrap.ts",
+            "line": 120,
+            "additionalContext": "if (!block) throw new Error('AES-KWP internal error')"
+          },
+          {
+            "location": "src/aesKeyWrap.ts",
+            "line": 128,
+            "additionalContext": "if (a.readUInt32BE(0) !== AIV_PREFIX) throw new Error('Invalid AES-KWP AIV')"
+          },
+          {
+            "location": "src/aesKeyWrap.ts",
+            "line": 132,
+            "additionalContext": "throw new Error('Invalid AES-KWP message length')"
+          },
+          {
+            "location": "src/aesKeyWrap.ts",
+            "line": 137,
+            "additionalContext": "if (padded.readUInt8(i) !== 0) throw new Error('Invalid AES-KWP padding')"
+          },
+          {
+            "location": "src/OpenBaoClient.ts",
+            "line": 77,
+            "additionalContext": "* `base64(RSA-OAEP(ephemeralAesKey) || AES-KWP(privateKeyPkcs8))`."
+          },
+          {
+            "location": "src/transitImport.ts",
+            "line": 22,
+            "additionalContext": "* PKCS#8 DER, wrapped with a one-time AES-256 key using RFC 5649, and that AES"
+          },
+          {
+            "location": "src/transitImport.ts",
+            "line": 26,
+            "additionalContext": "*     base64( RSA-OAEP(ephemeralAesKey) || AES-KWP(pkcs8) )"
+          },
+          {
+            "location": "src/transitImport.ts",
+            "line": 43,
+            "additionalContext": "import { aesKeyWrapPad } from './aesKeyWrap.js'"
+          },
+          {
+            "location": "src/transitImport.ts",
+            "line": 138,
+            "additionalContext": "const wrappedKey = aesKeyWrapPad(ephemeralKey, pkcs8)"
+          }
+        ]
+      }
+    },
+    {
+      "type": "cryptographic-asset",
+      "bom-ref": "crypto/algorithm/aes-256-ecb",
+      "name": "AES-256-ECB",
+      "description": "Single-block AES-ECB primitives used internally by the RFC 5649 AES-KWP implementation. No application data is encrypted directly with ECB.",
+      "cryptoProperties": {
+        "assetType": "algorithm",
+        "oid": "2.16.840.1.101.3.4.1.41",
+        "algorithmProperties": {
+          "primitive": "block-cipher",
+          "parameterSetIdentifier": "AES-256",
+          "executionEnvironment": "software-plain-ram",
+          "implementationPlatform": "generic",
+          "certificationLevel": [
+            "none"
+          ],
+          "mode": "ecb",
+          "cryptoFunctions": [
+            "encrypt",
+            "decrypt"
+          ],
+          "classicalSecurityLevel": 256
+        }
+      },
+      "evidence": {
+        "occurrences": [
+          {
+            "location": "src/aesKeyWrap.ts",
+            "line": 31,
+            "additionalContext": "function aesEcbEncryptBlock(key: Buffer, block: Buffer): Buffer {"
+          },
+          {
+            "location": "src/aesKeyWrap.ts",
+            "line": 37,
+            "additionalContext": "function aesEcbDecryptBlock(key: Buffer, block: Buffer): Buffer {"
+          },
+          {
+            "location": "src/aesKeyWrap.ts",
+            "line": 78,
+            "additionalContext": "return aesEcbEncryptBlock(key, Buffer.concat([a, onlyBlock]))"
+          },
+          {
+            "location": "src/aesKeyWrap.ts",
+            "line": 85,
+            "additionalContext": "const encrypted = aesEcbEncryptBlock(key, Buffer.concat([a, block]))"
+          },
+          {
+            "location": "src/aesKeyWrap.ts",
+            "line": 113,
+            "additionalContext": "const decrypted = aesEcbDecryptBlock(key, Buffer.concat([a, onlyBlock]))"
+          },
+          {
+            "location": "src/aesKeyWrap.ts",
+            "line": 121,
+            "additionalContext": "const decrypted = aesEcbDecryptBlock(key, Buffer.concat([xorWithRound(a, round * blockCount + i + 1), block]))"
+          }
+        ]
+      }
+    },
+    {
+      "type": "cryptographic-asset",
+      "bom-ref": "crypto/algorithm/sha-256",
+      "name": "SHA-256",
+      "description": "SHA-256 digest used by ES256, RS256, PS256, ES256K, RSA-OAEP and MGF1. Computed locally with node:crypto or inside Transit for signing.",
+      "cryptoProperties": {
+        "assetType": "algorithm",
+        "oid": "2.16.840.1.101.3.4.2.1",
+        "algorithmProperties": {
+          "primitive": "hash",
+          "parameterSetIdentifier": "SHA-256",
+          "executionEnvironment": "software-plain-ram",
+          "implementationPlatform": "generic",
+          "certificationLevel": [
+            "none"
+          ],
+          "cryptoFunctions": [
+            "digest"
+          ],
+          "classicalSecurityLevel": 128
+        }
+      },
+      "evidence": {
+        "occurrences": [
+          {
+            "location": "src/OpenBaoClient.ts",
+            "line": 83,
+            "additionalContext": "/** Hash used for RSA-OAEP. Defaults to `SHA256`, matching the wrapper here. */"
+          },
+          {
+            "location": "src/OpenBaoClient.ts",
+            "line": 84,
+            "additionalContext": "hashFunction?: 'SHA1' | 'SHA224' | 'SHA256' | 'SHA384' | 'SHA512'"
+          },
+          {
+            "location": "src/OpenBaoClient.ts",
+            "line": 126,
+            "additionalContext": "/** Transit hash algorithm, e.g. `sha2-256`. Omitted for Ed25519. */"
+          },
+          {
+            "location": "src/OpenBaoKeyManagementService.ts",
+            "line": 95,
+            "additionalContext": "ES256: { nodeHash: 'sha256', transitHash: 'sha2-256', marshaling: 'jws' },"
+          },
+          {
+            "location": "src/OpenBaoKeyManagementService.ts",
+            "line": 98,
+            "additionalContext": "RS256: { nodeHash: 'sha256', transitHash: 'sha2-256', signatureAlgorithm: 'pkcs1v15' },"
+          },
+          {
+            "location": "src/OpenBaoKeyManagementService.ts",
+            "line": 101,
+            "additionalContext": "PS256: { nodeHash: 'sha256', transitHash: 'sha2-256', signatureAlgorithm: 'pss', saltLength: 'hash' },"
+          },
+          {
+            "location": "src/OpenBaoKeyManagementService.ts",
+            "line": 106,
+            "additionalContext": "ES256K: { nodeHash: 'sha256', local: true },"
+          },
+          {
+            "location": "src/OpenBaoKeyManagementService.ts",
+            "line": 381,
+            "additionalContext": "hashFunction: 'SHA256',"
+          },
+          {
+            "location": "src/OpenBaoKeyManagementService.ts",
+            "line": 499,
+            "additionalContext": "if (algorithm.nodeHash !== 'sha256') {"
+          },
+          {
+            "location": "src/transitImport.ts",
+            "line": 133,
+            "additionalContext": "oaepHash: 'sha256',"
+          }
+        ]
+      }
+    },
+    {
+      "type": "cryptographic-asset",
+      "bom-ref": "crypto/algorithm/sha-384",
+      "name": "SHA-384",
+      "description": "SHA-384 digest used by ES384, RS384 and PS384.",
+      "cryptoProperties": {
+        "assetType": "algorithm",
+        "oid": "2.16.840.1.101.3.4.2.2",
+        "algorithmProperties": {
+          "primitive": "hash",
+          "parameterSetIdentifier": "SHA-384",
+          "executionEnvironment": "software-plain-ram",
+          "implementationPlatform": "generic",
+          "certificationLevel": [
+            "none"
+          ],
+          "cryptoFunctions": [
+            "digest"
+          ],
+          "classicalSecurityLevel": 192
+        }
+      },
+      "evidence": {
+        "occurrences": [
+          {
+            "location": "src/OpenBaoClient.ts",
+            "line": 84,
+            "additionalContext": "hashFunction?: 'SHA1' | 'SHA224' | 'SHA256' | 'SHA384' | 'SHA512'"
+          },
+          {
+            "location": "src/OpenBaoKeyManagementService.ts",
+            "line": 96,
+            "additionalContext": "ES384: { nodeHash: 'sha384', transitHash: 'sha2-384', marshaling: 'jws' },"
+          },
+          {
+            "location": "src/OpenBaoKeyManagementService.ts",
+            "line": 99,
+            "additionalContext": "RS384: { nodeHash: 'sha384', transitHash: 'sha2-384', signatureAlgorithm: 'pkcs1v15' },"
+          },
+          {
+            "location": "src/OpenBaoKeyManagementService.ts",
+            "line": 102,
+            "additionalContext": "PS384: { nodeHash: 'sha384', transitHash: 'sha2-384', signatureAlgorithm: 'pss', saltLength: 'hash' },"
+          }
+        ]
+      }
+    },
+    {
+      "type": "cryptographic-asset",
+      "bom-ref": "crypto/algorithm/sha-512",
+      "name": "SHA-512",
+      "description": "SHA-512 digest used by ES512, RS512 and PS512.",
+      "cryptoProperties": {
+        "assetType": "algorithm",
+        "oid": "2.16.840.1.101.3.4.2.3",
+        "algorithmProperties": {
+          "primitive": "hash",
+          "parameterSetIdentifier": "SHA-512",
+          "executionEnvironment": "software-plain-ram",
+          "implementationPlatform": "generic",
+          "certificationLevel": [
+            "none"
+          ],
+          "cryptoFunctions": [
+            "digest"
+          ],
+          "classicalSecurityLevel": 256
+        }
+      },
+      "evidence": {
+        "occurrences": [
+          {
+            "location": "src/OpenBaoClient.ts",
+            "line": 84,
+            "additionalContext": "hashFunction?: 'SHA1' | 'SHA224' | 'SHA256' | 'SHA384' | 'SHA512'"
+          },
+          {
+            "location": "src/OpenBaoKeyManagementService.ts",
+            "line": 97,
+            "additionalContext": "ES512: { nodeHash: 'sha512', transitHash: 'sha2-512', marshaling: 'jws' },"
+          },
+          {
+            "location": "src/OpenBaoKeyManagementService.ts",
+            "line": 100,
+            "additionalContext": "RS512: { nodeHash: 'sha512', transitHash: 'sha2-512', signatureAlgorithm: 'pkcs1v15' },"
+          },
+          {
+            "location": "src/OpenBaoKeyManagementService.ts",
+            "line": 103,
+            "additionalContext": "PS512: { nodeHash: 'sha512', transitHash: 'sha2-512', signatureAlgorithm: 'pss', saltLength: 'hash' },"
+          }
+        ]
+      }
+    },
+    {
+      "type": "cryptographic-asset",
+      "bom-ref": "crypto/algorithm/csprng",
+      "name": "Cryptographically secure random number generation",
+      "description": "Random bytes for ephemeral AES keys, secp256k1 secret keys and X25519 key generation. Provided by the Node.js OpenSSL CSPRNG (randomBytes) and @noble/curves randomSecretKey.",
+      "cryptoProperties": {
+        "assetType": "algorithm",
+        "algorithmProperties": {
+          "primitive": "drbg",
+          "parameterSetIdentifier": "OpenSSL CSPRNG / platform entropy",
+          "executionEnvironment": "software-plain-ram",
+          "implementationPlatform": "generic",
+          "certificationLevel": [
+            "none"
+          ],
+          "cryptoFunctions": [
+            "generate"
+          ],
+          "classicalSecurityLevel": 256
+        }
+      },
+      "evidence": {
+        "occurrences": [
+          {
+            "location": "src/OpenBaoKeyManagementService.ts",
+            "line": 160,
+            "additionalContext": "* its key store. Unsupported on purpose: encrypt/decrypt, randomBytes and"
+          },
+          {
+            "location": "src/OpenBaoKeyManagementService.ts",
+            "line": 216,
+            "additionalContext": "case 'randomBytes':"
+          },
+          {
+            "location": "src/OpenBaoKeyManagementService.ts",
+            "line": 433,
+            "additionalContext": "* Not supported: OpenBao is remote and Credo's `randomBytes` is synchronous."
+          },
+          {
+            "location": "src/OpenBaoKeyManagementService.ts",
+            "line": 436,
+            "additionalContext": "public randomBytes(_agentContext: AgentContext, _options: KmsRandomBytesOptions): KmsRandomBytesReturn {"
+          },
+          {
+            "location": "src/secp256k1.ts",
+            "line": 45,
+            "additionalContext": "const privateKey = secp256k1.utils.randomSecretKey()"
+          },
+          {
+            "location": "src/transitImport.ts",
+            "line": 32,
+            "additionalContext": "import { constants, createPrivateKey, createPublicKey, publicEncrypt, randomBytes } from 'node:crypto'"
+          },
+          {
+            "location": "src/transitImport.ts",
+            "line": 127,
+            "additionalContext": "const ephemeralKey = randomBytes(32)"
+          }
+        ]
+      }
+    },
+    {
+      "type": "cryptographic-asset",
+      "bom-ref": "crypto/protocol/tls-1.2-1.3",
+      "name": "TLS 1.2 / 1.3",
+      "description": "Transport security for the OpenBao HTTP API. The protocol version and cipher suites are configured on the OpenBao listener; this package requires an https:// address for non-local deployments.",
+      "cryptoProperties": {
+        "assetType": "protocol",
+        "protocolProperties": {
+          "type": "tls",
+          "version": "1.2, 1.3"
+        }
+      },
+      "evidence": {
+        "occurrences": [
+          {
+            "location": "README.md",
+            "line": 37,
+            "additionalContext": "address: 'https://openbao.internal:8200',"
+          }
+        ]
+      }
+    },
+    {
+      "type": "cryptographic-asset",
+      "bom-ref": "crypto/related-crypto-material/transit-signing-keys",
+      "name": "OpenBao Transit asymmetric signing keys",
+      "description": "Private keys created or imported into the Transit secrets engine. For createKey the private key never leaves OpenBao; importKey transfers it once as a wrapped PKCS#8 blob.",
+      "cryptoProperties": {
+        "assetType": "related-crypto-material",
+        "relatedCryptoMaterialProperties": {
+          "type": "private-key",
+          "state": "active",
+          "securedBy": {
+            "mechanism": "OpenBao barrier encryption and Transit key isolation"
+          }
+        }
+      },
+      "evidence": {
+        "occurrences": [
+          {
+            "location": "src/OpenBaoClient.ts",
+            "line": 181,
+            "additionalContext": "deletion_allowed: config.deletionAllowed,"
+          }
+        ]
+      }
+    },
+    {
+      "type": "cryptographic-asset",
+      "bom-ref": "crypto/related-crypto-material/transit-wrapping-key",
+      "name": "OpenBao Transit RSA wrapping key",
+      "description": "The server's RSA-4096 public key returned by GET /transit/wrapping_key and used to wrap the ephemeral AES key for BYOK import.",
+      "cryptoProperties": {
+        "assetType": "related-crypto-material",
+        "relatedCryptoMaterialProperties": {
+          "type": "public-key",
+          "state": "active",
+          "size": 4096,
+          "algorithmRef": "crypto/algorithm/rsa-oaep-256"
+        }
+      },
+      "evidence": {
+        "occurrences": [
+          {
+            "location": "src/OpenBaoClient.ts",
+            "line": 60,
+            "additionalContext": "getWrappingKey(): Promise<string>"
+          },
+          {
+            "location": "src/OpenBaoClient.ts",
+            "line": 189,
+            "additionalContext": "public async getWrappingKey(): Promise<string> {"
+          },
+          {
+            "location": "src/OpenBaoClient.ts",
+            "line": 190,
+            "additionalContext": "const data = await this.#request<{ public_key: string }>('GET', 'wrapping_key')"
+          },
+          {
+            "location": "src/OpenBaoKeyManagementService.ts",
+            "line": 374,
+            "additionalContext": "const wrappingKey = await this.#client.getWrappingKey()"
+          }
+        ]
+      }
+    },
+    {
+      "type": "cryptographic-asset",
+      "bom-ref": "crypto/related-crypto-material/kv-secp256k1-key",
+      "name": "secp256k1 private JWK in OpenBao KV v2",
+      "description": "Private secp256k1 JWK stored in the configured KV v2 mount when Transit cannot represent the curve. The private key is read into the agent process to sign.",
+      "cryptoProperties": {
+        "assetType": "related-crypto-material",
+        "relatedCryptoMaterialProperties": {
+          "type": "private-key",
+          "state": "active",
+          "size": 256,
+          "algorithmRef": "crypto/algorithm/secp256k1",
+          "securedBy": {
+            "mechanism": "OpenBao KV v2 barrier encryption; readable by any client with read access to the path"
+          }
+        }
+      },
+      "evidence": {
+        "occurrences": [
+          {
+            "location": "src/OpenBaoClient.ts",
+            "line": 65,
+            "additionalContext": "* not exist. Used for key types Transit cannot represent (secp256k1, X25519)."
+          },
+          {
+            "location": "src/OpenBaoKeyManagementService.ts",
+            "line": 55,
+            "additionalContext": "import { generateSecp256k1KeyPair, signSecp256k1, verifySecp256k1 } from './secp256k1.js'"
+          },
+          {
+            "location": "src/OpenBaoKeyManagementService.ts",
+            "line": 104,
+            "additionalContext": "// secp256k1 (`did:ethr`, `did:key`). Transit has no such key type, so the"
+          },
+          {
+            "location": "src/OpenBaoKeyManagementService.ts",
+            "line": 113,
+            "additionalContext": "type KvKeyType = 'secp256k1' | 'x25519'"
+          },
+          {
+            "location": "src/OpenBaoKeyManagementService.ts",
+            "line": 143,
+            "additionalContext": "* KV v2 mount used for key types Transit cannot represent (secp256k1 and"
+          },
+          {
+            "location": "src/OpenBaoKeyManagementService.ts",
+            "line": 149,
+            "additionalContext": "/** Path prefix inside `kvMount`. Defaults to `credo-keys`. */"
+          },
+          {
+            "location": "src/OpenBaoKeyManagementService.ts",
+            "line": 157,
+            "additionalContext": "* inside the Transit secrets engine. secp256k1 and X25519 — which Transit"
+          },
+          {
+            "location": "src/OpenBaoKeyManagementService.ts",
+            "line": 158,
+            "additionalContext": "* cannot represent — can be stored in a KV v2 mount (`kvMount`); secp256k1 is"
+          },
+          {
+            "location": "src/OpenBaoKeyManagementService.ts",
+            "line": 180,
+            "additionalContext": "this.#kvPathPrefix = (options.kvPathPrefix ?? 'credo-keys').replace(/^\\/+|\\/+$/g, '')"
+          },
+          {
+            "location": "src/OpenBaoKeyManagementService.ts",
+            "line": 231,
+            "additionalContext": "// Not in Transit. secp256k1/X25519 keys may live in the KV fallback."
+          },
+          {
+            "location": "src/OpenBaoKeyManagementService.ts",
+            "line": 356,
+            "additionalContext": "* travel in plaintext. secp256k1 and X25519 use the configured KV v2 mount;"
+          },
+          {
+            "location": "src/OpenBaoKeyManagementService.ts",
+            "line": 357,
+            "additionalContext": "* secp256k1 signatures are then produced in-process."
+          },
+          {
+            "location": "src/OpenBaoKeyManagementService.ts",
+            "line": 456,
+            "additionalContext": "// secp256k1 is generated with @noble/curves so the same code works on"
+          },
+          {
+            "location": "src/OpenBaoKeyManagementService.ts",
+            "line": 461,
+            "additionalContext": "if (keyType === 'secp256k1') {"
+          },
+          {
+            "location": "src/OpenBaoKeyManagementService.ts",
+            "line": 493,
+            "additionalContext": "if (record.keyType !== 'secp256k1') {"
+          },
+          {
+            "location": "src/OpenBaoKeyManagementService.ts",
+            "line": 526,
+            "additionalContext": "(data.keyType !== 'secp256k1' && data.keyType !== 'x25519') ||"
+          },
+          {
+            "location": "src/OpenBaoKeyManagementService.ts",
+            "line": 578,
+            "additionalContext": "// Transit has no secp256k1 key type; stored in KV when configured."
+          },
+          {
+            "location": "src/OpenBaoKeyManagementService.ts",
+            "line": 579,
+            "additionalContext": "case 'secp256k1':"
+          },
+          {
+            "location": "src/OpenBaoKeyManagementService.ts",
+            "line": 613,
+            "additionalContext": "// Transit cannot import secp256k1 key material."
+          },
+          {
+            "location": "src/OpenBaoKeyManagementService.ts",
+            "line": 653,
+            "additionalContext": "if (type.kty === 'EC' && type.crv === 'secp256k1') return 'secp256k1'"
+          },
+          {
+            "location": "src/OpenBaoKeyManagementService.ts",
+            "line": 659,
+            "additionalContext": "if (jwk.kty === 'EC' && jwk.crv === 'secp256k1') return 'secp256k1'"
+          },
+          {
+            "location": "src/OpenBaoKeyManagementService.ts",
+            "line": 723,
+            "additionalContext": "// node:crypto cannot handle secp256k1 on every runtime, so verification of"
+          },
+          {
+            "location": "src/OpenBaoKeyManagementService.ts",
+            "line": 725,
+            "additionalContext": "if (jwk.kty === 'EC' && jwk.crv === 'secp256k1') {"
+          },
+          {
+            "location": "src/secp256k1.ts",
+            "line": 18,
+            "additionalContext": "import { secp256k1 } from '@noble/curves/secp256k1.js'"
+          },
+          {
+            "location": "src/secp256k1.ts",
+            "line": 21,
+            "additionalContext": "* Minimal JWK-level helpers for secp256k1."
+          },
+          {
+            "location": "src/secp256k1.ts",
+            "line": 23,
+            "additionalContext": "* Transit cannot represent secp256k1, so the KV fallback has to create, sign,"
+          },
+          {
+            "location": "src/secp256k1.ts",
+            "line": 24,
+            "additionalContext": "* and verify these keys in-process. `node:crypto` supports secp256k1 on Node.js"
+          },
+          {
+            "location": "src/secp256k1.ts",
+            "line": 45,
+            "additionalContext": "const privateKey = secp256k1.utils.randomSecretKey()"
+          },
+          {
+            "location": "src/secp256k1.ts",
+            "line": 46,
+            "additionalContext": "const publicKey = secp256k1.getPublicKey(privateKey, false)"
+          },
+          {
+            "location": "src/secp256k1.ts",
+            "line": 54,
+            "additionalContext": "crv: 'secp256k1',"
+          },
+          {
+            "location": "src/secp256k1.ts",
+            "line": 61,
+            "additionalContext": "crv: 'secp256k1',"
+          },
+          {
+            "location": "src/secp256k1.ts",
+            "line": 76,
+            "additionalContext": "throw new Error(\"The secp256k1 private JWK does not contain a 'd' parameter\")"
+          },
+          {
+            "location": "src/secp256k1.ts",
+            "line": 79,
+            "additionalContext": "const signature = secp256k1.sign(data, decodeBase64Url(d))"
+          },
+          {
+            "location": "src/secp256k1.ts",
+            "line": 84,
+            "additionalContext": "* Verify an ES256K signature against a secp256k1 public JWK."
+          },
+          {
+            "location": "src/secp256k1.ts",
+            "line": 99,
+            "additionalContext": "return secp256k1.verify(signature, data, publicKey, { lowS: false })"
+          }
+        ]
+      }
+    },
+    {
+      "type": "cryptographic-asset",
+      "bom-ref": "crypto/related-crypto-material/kv-x25519-key",
+      "name": "X25519 private JWK in OpenBao KV v2",
+      "description": "Private X25519 JWK stored in the configured KV v2 mount when Transit cannot represent the curve. Used for DID key agreement by the Credo agent.",
+      "cryptoProperties": {
+        "assetType": "related-crypto-material",
+        "relatedCryptoMaterialProperties": {
+          "type": "private-key",
+          "state": "active",
+          "size": 256,
+          "algorithmRef": "crypto/algorithm/x25519",
+          "securedBy": {
+            "mechanism": "OpenBao KV v2 barrier encryption; readable by any client with read access to the path"
+          }
+        }
+      },
+      "evidence": {
+        "occurrences": [
+          {
+            "location": "src/OpenBaoClient.ts",
+            "line": 65,
+            "additionalContext": "* not exist. Used for key types Transit cannot represent (secp256k1, X25519)."
+          },
+          {
+            "location": "src/OpenBaoKeyManagementService.ts",
+            "line": 113,
+            "additionalContext": "type KvKeyType = 'secp256k1' | 'x25519'"
+          },
+          {
+            "location": "src/OpenBaoKeyManagementService.ts",
+            "line": 144,
+            "additionalContext": "* X25519). Leave unset to route those key types to another backend such as"
+          },
+          {
+            "location": "src/OpenBaoKeyManagementService.ts",
+            "line": 149,
+            "additionalContext": "/** Path prefix inside `kvMount`. Defaults to `credo-keys`. */"
+          },
+          {
+            "location": "src/OpenBaoKeyManagementService.ts",
+            "line": 157,
+            "additionalContext": "* inside the Transit secrets engine. secp256k1 and X25519 — which Transit"
+          },
+          {
+            "location": "src/OpenBaoKeyManagementService.ts",
+            "line": 180,
+            "additionalContext": "this.#kvPathPrefix = (options.kvPathPrefix ?? 'credo-keys').replace(/^\\/+|\\/+$/g, '')"
+          },
+          {
+            "location": "src/OpenBaoKeyManagementService.ts",
+            "line": 231,
+            "additionalContext": "// Not in Transit. secp256k1/X25519 keys may live in the KV fallback."
+          },
+          {
+            "location": "src/OpenBaoKeyManagementService.ts",
+            "line": 356,
+            "additionalContext": "* travel in plaintext. secp256k1 and X25519 use the configured KV v2 mount;"
+          },
+          {
+            "location": "src/OpenBaoKeyManagementService.ts",
+            "line": 458,
+            "additionalContext": "// X25519 uses node:crypto, which supports it everywhere we target."
+          },
+          {
+            "location": "src/OpenBaoKeyManagementService.ts",
+            "line": 466,
+            "additionalContext": "const { privateKey, publicKey } = generateKeyPairSync('x25519')"
+          },
+          {
+            "location": "src/OpenBaoKeyManagementService.ts",
+            "line": 526,
+            "additionalContext": "(data.keyType !== 'secp256k1' && data.keyType !== 'x25519') ||"
+          },
+          {
+            "location": "src/OpenBaoKeyManagementService.ts",
+            "line": 585,
+            "additionalContext": "// Transit has no X25519 key type; stored in KV when configured."
+          },
+          {
+            "location": "src/OpenBaoKeyManagementService.ts",
+            "line": 620,
+            "additionalContext": "// X25519 is not a signing key and Transit has no such key type."
+          },
+          {
+            "location": "src/OpenBaoKeyManagementService.ts",
+            "line": 654,
+            "additionalContext": "if (type.kty === 'OKP' && type.crv === 'X25519') return 'x25519'"
+          },
+          {
+            "location": "src/OpenBaoKeyManagementService.ts",
+            "line": 660,
+            "additionalContext": "if (jwk.kty === 'OKP' && jwk.crv === 'X25519') return 'x25519'"
+          }
+        ]
+      }
+    },
+    {
+      "type": "cryptographic-asset",
+      "bom-ref": "crypto/related-crypto-material/ephemeral-aes-kek",
+      "name": "Ephemeral AES-256 key-encryption key",
+      "description": "A random 32-byte AES key created for each Transit BYOK import. It wraps the PKCS#8 private key with AES-KWP and is itself wrapped with the Transit RSA wrapping key.",
+      "cryptoProperties": {
+        "assetType": "related-crypto-material",
+        "relatedCryptoMaterialProperties": {
+          "type": "secret-key",
+          "state": "active",
+          "size": 256,
+          "algorithmRef": "crypto/algorithm/aes-256-kwp"
+        }
+      },
+      "evidence": {
+        "occurrences": [
+          {
+            "location": "src/transitImport.ts",
+            "line": 127,
+            "additionalContext": "const ephemeralKey = randomBytes(32)"
+          }
+        ]
+      }
+    },
+    {
+      "type": "application",
+      "bom-ref": "provider/openbao",
+      "name": "OpenBao (Transit and KV v2)",
+      "version": "2.7.2",
+      "description": "OpenBao server providing the Transit secrets engine and the KV v2 fallback mount used by this package. Version 2.7.2 is the version verified by the live check.",
+      "externalReferences": [
+        {
+          "type": "website",
+          "url": "https://openbao.org"
+        },
+        {
+          "type": "documentation",
+          "url": "https://openbao.org/docs/secrets/transit/"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "bom-ref": "provider/node-crypto",
+      "name": "Node.js crypto (OpenSSL)",
+      "version": "Node.js >=22",
+      "description": "Node.js built-in crypto module backed by the bundled OpenSSL. Used for key generation, verification, PKCS#8/JWK conversion, AES-ECB (inside AES-KWP), RSA-OAEP and hashing.",
+      "externalReferences": [
+        {
+          "type": "documentation",
+          "url": "https://nodejs.org/api/crypto.html"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "bom-ref": "credo-ts-openbao@0.1.0|@noble/curves@2.4.0",
+      "name": "curves",
+      "version": "2.4.0",
+      "description": "Pure-JavaScript secp256k1 implementation used for key generation, signing and verification when the runtime's OpenSSL build does not support the curve.",
+      "group": "@noble",
+      "purl": "pkg:npm/%40noble/curves@2.4.0",
+      "licenses": [
+        {
+          "license": {
+            "id": "MIT",
+            "acknowledgement": "declared"
+          }
+        }
+      ],
+      "externalReferences": [
+        {
+          "url": "https://registry.npmjs.org/@noble/curves/-/curves-2.4.0.tgz",
+          "type": "distribution",
+          "hashes": [
+            {
+              "alg": "SHA-512",
+              "content": "3f8ffadb3ae07c7df70a7784dc39f85a1255036d98514d1e479d702886a7e0d551bf0b00d189cf4f0586a4d6e9b9a712ba399214bbf2ce9cae477d3e7dbab613"
+            }
+          ],
+          "comment": "as detected from npm-ls property \"resolved\" and property \"integrity\""
+        }
+      ]
+    }
+  ],
+  "dependencies": [
+    {
+      "ref": "credo-ts-openbao@0.1.0",
+      "dependsOn": [
+        "crypto/algorithm/ed25519",
+        "crypto/algorithm/ecdsa-p256",
+        "crypto/algorithm/ecdsa-p384",
+        "crypto/algorithm/ecdsa-p521",
+        "crypto/algorithm/secp256k1",
+        "crypto/algorithm/x25519",
+        "crypto/algorithm/rsa-2048",
+        "crypto/algorithm/rsa-3072",
+        "crypto/algorithm/rsa-4096",
+        "crypto/algorithm/rsa-pss",
+        "crypto/algorithm/rsa-oaep-256",
+        "crypto/algorithm/aes-256-kwp",
+        "crypto/algorithm/aes-256-ecb",
+        "crypto/algorithm/sha-256",
+        "crypto/algorithm/sha-384",
+        "crypto/algorithm/sha-512",
+        "crypto/algorithm/csprng",
+        "crypto/protocol/tls-1.2-1.3",
+        "crypto/related-crypto-material/transit-signing-keys",
+        "crypto/related-crypto-material/transit-wrapping-key",
+        "crypto/related-crypto-material/kv-secp256k1-key",
+        "crypto/related-crypto-material/kv-x25519-key",
+        "crypto/related-crypto-material/ephemeral-aes-kek",
+        "provider/openbao",
+        "provider/node-crypto",
+        "credo-ts-openbao@0.1.0|@noble/curves@2.4.0"
+      ]
+    },
+    {
+      "ref": "crypto/algorithm/ed25519",
+      "dependsOn": [
+        "provider/openbao",
+        "provider/node-crypto"
+      ]
+    },
+    {
+      "ref": "crypto/algorithm/ecdsa-p256",
+      "dependsOn": [
+        "provider/openbao",
+        "provider/node-crypto"
+      ]
+    },
+    {
+      "ref": "crypto/algorithm/ecdsa-p384",
+      "dependsOn": [
+        "provider/openbao",
+        "provider/node-crypto"
+      ]
+    },
+    {
+      "ref": "crypto/algorithm/ecdsa-p521",
+      "dependsOn": [
+        "provider/openbao",
+        "provider/node-crypto"
+      ]
+    },
+    {
+      "ref": "crypto/algorithm/secp256k1",
+      "dependsOn": [
+        "credo-ts-openbao@0.1.0|@noble/curves@2.4.0"
+      ]
+    },
+    {
+      "ref": "crypto/algorithm/x25519",
+      "dependsOn": [
+        "provider/node-crypto",
+        "provider/openbao"
+      ]
+    },
+    {
+      "ref": "crypto/algorithm/rsa-2048",
+      "dependsOn": [
+        "provider/openbao",
+        "provider/node-crypto"
+      ]
+    },
+    {
+      "ref": "crypto/algorithm/rsa-3072",
+      "dependsOn": [
+        "provider/openbao",
+        "provider/node-crypto"
+      ]
+    },
+    {
+      "ref": "crypto/algorithm/rsa-4096",
+      "dependsOn": [
+        "provider/openbao",
+        "provider/node-crypto"
+      ]
+    },
+    {
+      "ref": "crypto/algorithm/rsa-pss",
+      "dependsOn": [
+        "provider/openbao",
+        "provider/node-crypto"
+      ]
+    },
+    {
+      "ref": "crypto/algorithm/rsa-oaep-256",
+      "dependsOn": [
+        "provider/node-crypto",
+        "provider/openbao"
+      ]
+    },
+    {
+      "ref": "crypto/algorithm/aes-256-kwp",
+      "dependsOn": [
+        "provider/node-crypto",
+        "provider/openbao"
+      ]
+    },
+    {
+      "ref": "crypto/algorithm/aes-256-ecb",
+      "dependsOn": [
+        "provider/node-crypto"
+      ]
+    },
+    {
+      "ref": "crypto/algorithm/sha-256",
+      "dependsOn": [
+        "provider/node-crypto",
+        "provider/openbao"
+      ]
+    },
+    {
+      "ref": "crypto/algorithm/sha-384",
+      "dependsOn": [
+        "provider/node-crypto",
+        "provider/openbao"
+      ]
+    },
+    {
+      "ref": "crypto/algorithm/sha-512",
+      "dependsOn": [
+        "provider/node-crypto",
+        "provider/openbao"
+      ]
+    },
+    {
+      "ref": "crypto/algorithm/csprng",
+      "dependsOn": [
+        "provider/node-crypto",
+        "credo-ts-openbao@0.1.0|@noble/curves@2.4.0"
+      ]
+    },
+    {
+      "ref": "crypto/protocol/tls-1.2-1.3",
+      "dependsOn": [
+        "provider/node-crypto",
+        "provider/openbao"
+      ]
+    },
+    {
+      "ref": "crypto/related-crypto-material/transit-signing-keys",
+      "dependsOn": [
+        "provider/openbao"
+      ]
+    },
+    {
+      "ref": "crypto/related-crypto-material/transit-wrapping-key",
+      "dependsOn": [
+        "provider/openbao"
+      ]
+    },
+    {
+      "ref": "crypto/related-crypto-material/kv-secp256k1-key",
+      "dependsOn": [
+        "provider/openbao",
+        "credo-ts-openbao@0.1.0|@noble/curves@2.4.0"
+      ]
+    },
+    {
+      "ref": "crypto/related-crypto-material/kv-x25519-key",
+      "dependsOn": [
+        "provider/openbao",
+        "provider/node-crypto"
+      ]
+    },
+    {
+      "ref": "crypto/related-crypto-material/ephemeral-aes-kek",
+      "dependsOn": [
+        "provider/node-crypto"
+      ]
+    },
+    {
+      "ref": "provider/openbao"
+    },
+    {
+      "ref": "provider/node-crypto"
+    },
+    {
+      "ref": "credo-ts-openbao@0.1.0|@noble/curves@2.4.0"
+    }
+  ],
+  "externalReferences": [
+    {
+      "type": "vcs",
+      "url": "https://github.com/sovio-id/credo-ts-openbao"
+    }
+  ],
+  "serialNumber": "urn:uuid:07d4fdae-6cd7-52b2-a2e3-d1740ff0c971"
+}
