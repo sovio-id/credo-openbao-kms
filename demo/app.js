@@ -1,6 +1,29 @@
 const STORAGE_KEY = 'credo-openbao-demo.keys.v1'
 const MAX_ACTIVITY = 120
 
+const SDJWT_DEFAULT_CLAIMS = `{
+  "given_name": "Alex",
+  "family_name": "Doe",
+  "birthdate": "1985-04-12",
+  "nationalities": ["IN"]
+}`
+const SDJWT_DEFAULT_DISCLOSURE = `{
+  "_sd": ["given_name", "family_name", "birthdate"]
+}`
+const SDJWT_DEFAULT_PRESENTATION = `{
+  "given_name": true,
+  "family_name": true
+}`
+const MDOC_DEFAULT_CLAIMS = `{
+  "given_name": "Alex",
+  "family_name": "Doe",
+  "birth_date": "1985-04-12",
+  "issuing_country": "IN",
+  "issuing_authority": "OpenBao Demo Issuer",
+  "document_number": "OB-DEMO-0001",
+  "age_over_18": true
+}`
+
 const $ = (selector, root = document) => root.querySelector(selector)
 const $$ = (selector, root = document) => [...root.querySelectorAll(selector)]
 
@@ -9,6 +32,7 @@ const state = {
   keys: loadKeys(),
   lastSignature: null,
   lastCipher: null,
+  credentials: { sdJwtVc: [], mdoc: [] },
   activity: [],
 }
 
@@ -34,6 +58,10 @@ function esc(value) {
 
 function shortKeyId(keyId) {
   return keyId.length > 30 ? `${keyId.slice(0, 15)}…${keyId.slice(-10)}` : keyId
+}
+
+function shortId(id) {
+  return id.length > 20 ? `${id.slice(0, 10)}…${id.slice(-6)}` : id
 }
 
 function storeLabel(store) {
@@ -119,6 +147,7 @@ function switchView(view) {
   $$('.nav-link').forEach((button) => button.classList.toggle('active', button.dataset.view === view))
   window.scrollTo({ top: 0, behavior: 'smooth' })
   if (view === 'dids') void loadDids()
+  if (view === 'credentials') void loadCredentials()
 }
 
 function wireNavigation() {
@@ -316,19 +345,39 @@ function renderKeys() {
   refreshKeySelects()
 }
 
-function refreshKeySelects() {
-  const signSelect = $('#sign-key')
-  const didSelect = $('#did-key')
-  const options = state.keys.length
-    ? state.keys
-        .map((key) => `<option value="${esc(key.keyId)}">${esc(key.label)} · ${esc(shortKeyId(key.keyId))}</option>`)
-        .join('')
-    : '<option value="">No keys — create one first</option>'
+function signingKeys() {
+  return state.keys.filter((key) => key.signing)
+}
 
-  for (const select of [signSelect, didSelect]) {
+function mdocKeys() {
+  return state.keys.filter((key) => key.algorithms.some((algorithm) => ['ES256', 'ES384', 'ES512', 'EdDSA'].includes(algorithm)))
+}
+
+function keyOptions(keys, emptyLabel) {
+  const options = keys
+    .map((key) => `<option value="${esc(key.keyId)}">${esc(key.label)} · ${esc(shortKeyId(key.keyId))}</option>`)
+    .join('')
+
+  if (emptyLabel) return `<option value="">${esc(emptyLabel)}</option>${options}`
+  return options || '<option value="">No keys — create one first</option>'
+}
+
+function refreshKeySelects() {
+  const selects = [
+    ['#sign-key', signingKeys(), null],
+    ['#did-key', state.keys, null],
+    ['#sdjwt-key', signingKeys(), null],
+    ['#sdjwt-holder-key', signingKeys(), 'Bearer credential (no holder binding)'],
+    ['#mdoc-key', mdocKeys(), null],
+    ['#mdoc-holder-key', mdocKeys(), 'Generate a P-256 holder key'],
+  ]
+
+  for (const [selector, keys, emptyLabel] of selects) {
+    const select = $(selector)
+    if (!select) continue
     const previous = select.value
-    select.innerHTML = options
-    if (previous && state.keys.some((key) => key.keyId === previous)) select.value = previous
+    select.innerHTML = keyOptions(keys, emptyLabel)
+    if (previous && keys.some((key) => key.keyId === previous)) select.value = previous
   }
 
   updateSignAlgorithms()
@@ -755,8 +804,308 @@ function renderX509(result) {
 }
 
 /* -------------------------------------------------------------------------- */
-/* Activity, dialog, clipboard                                                 */
+/* Credentials                                                                 */
 /* -------------------------------------------------------------------------- */
+
+function parseJsonObject(value, label) {
+  let parsed
+  try {
+    parsed = JSON.parse(value)
+  } catch (error) {
+    throw new Error(`${label}: ${error.message}`)
+  }
+  if (typeof parsed !== 'object' || parsed === null || Array.isArray(parsed)) {
+    throw new Error(`${label}: expected a JSON object`)
+  }
+  return parsed
+}
+
+function issuerLabel(issuer) {
+  if (!issuer) return '—'
+  if (typeof issuer === 'string') return issuer
+  if (issuer.method === 'did') return issuer.didUrl ?? 'did'
+  if (issuer.method === 'x5c') return 'x5c certificate'
+  return JSON.stringify(issuer)
+}
+
+function showCredentialResult(valid, title, payload, target = '#credential-verify-result') {
+  const element = $(target)
+  element.innerHTML = `
+    <div class="verify-banner ${valid ? 'ok' : 'err'}">
+      <span>${valid ? '✓' : '✕'}</span>
+      <span>${esc(title)}</span>
+    </div>
+    <pre>${esc(JSON.stringify(payload, null, 2))}</pre>`
+}
+
+async function loadCredentials() {
+  try {
+    state.credentials = await api('/credentials')
+    renderCredentials()
+  } catch (error) {
+    toast('err', 'Could not load credentials', error.message)
+  }
+}
+
+function renderCredentials() {
+  const sdJwtVcRecords = state.credentials.sdJwtVc ?? []
+  const mdocRecords = state.credentials.mdoc ?? []
+
+  $('#sdjwt-table tbody').innerHTML = sdJwtVcRecords.length
+    ? sdJwtVcRecords
+        .map(
+          (record) => `
+            <tr>
+              <td class="mono" title="${esc(record.id)}">${esc(shortId(record.id))}</td>
+              <td class="mono">${esc(record.vct ?? '—')}</td>
+              <td class="mono" title="${esc(issuerLabel(record.issuer))}">${esc(issuerLabel(record.issuer))}</td>
+              <td>
+                <div class="actions">
+                  <button class="btn ghost small" data-credential-action="verify-sd" data-id="${esc(record.id)}">Verify</button>
+                  <button class="btn danger small" data-credential-action="delete-sd" data-id="${esc(record.id)}">Delete</button>
+                </div>
+              </td>
+            </tr>`,
+        )
+        .join('')
+    : '<tr><td colspan="4" class="muted">No SD-JWT VCs stored yet. Issue one above.</td></tr>'
+
+  $('#mdoc-table tbody').innerHTML = mdocRecords.length
+    ? mdocRecords
+        .map(
+          (record) => `
+            <tr>
+              <td class="mono" title="${esc(record.id)}">${esc(shortId(record.id))}</td>
+              <td class="mono">${esc(record.docType ?? '—')}</td>
+              <td class="mono">${esc(record.validityInfo?.validUntil ? new Date(record.validityInfo.validUntil).toLocaleString() : '—')}</td>
+              <td>
+                <div class="actions">
+                  <button class="btn ghost small" data-credential-action="verify-mdoc" data-id="${esc(record.id)}">Verify</button>
+                  <button class="btn danger small" data-credential-action="delete-mdoc" data-id="${esc(record.id)}">Delete</button>
+                </div>
+              </td>
+            </tr>`,
+        )
+        .join('')
+    : '<tr><td colspan="4" class="muted">No mdocs stored yet. Issue one above.</td></tr>'
+
+  const presentSelect = $('#sdjwt-present-id')
+  const previous = presentSelect.value
+  presentSelect.innerHTML = sdJwtVcRecords.length
+    ? sdJwtVcRecords
+        .map(
+          (record) =>
+            `<option value="${esc(record.id)}">${esc(shortId(record.id))} · ${esc(record.vct ?? 'SD-JWT VC')}</option>`,
+        )
+        .join('')
+    : '<option value="">No SD-JWT VCs stored</option>'
+  if (previous && sdJwtVcRecords.some((record) => record.id === previous)) presentSelect.value = previous
+
+  $('#present-sd-jwt').disabled = sdJwtVcRecords.length === 0
+}
+
+async function issueSdJwtVc() {
+  const keyId = $('#sdjwt-key').value
+  if (!keyId) {
+    toast('err', 'No issuer key', 'Create a signing key first.')
+    return
+  }
+
+  const button = $('#issue-sd-jwt')
+  setBusy(button, true, 'Issuing…')
+
+  try {
+    const claims = parseJsonObject($('#sdjwt-claims').value, 'Claims')
+    const disclosureFrame = parseJsonObject($('#sdjwt-disclosure').value, 'Disclosure frame')
+    const holderKeyId = $('#sdjwt-holder-key').value
+
+    const result = await api('/credentials/sd-jwt-vc', {
+      method: 'POST',
+      body: {
+        keyId,
+        claims,
+        disclosureFrame,
+        ...(holderKeyId ? { holderKeyId } : {}),
+      },
+    })
+
+    $('#sdjwt-issue-result').innerHTML = `
+      ${kvRow('Record id', result.id)}
+      ${kvRow('Issuer DID', result.issuerDid)}
+      ${result.holderDid ? kvRow('Holder DID', result.holderDid) : ''}
+      ${kvRow('Compact', result.compact)}
+      <pre>${esc(JSON.stringify({ payload: result.payload, prettyClaims: result.prettyClaims }, null, 2))}</pre>`
+
+    toast('ok', 'SD-JWT VC issued', 'Signed with OpenBao KMS and stored in SQLite')
+    await loadCredentials()
+    if (result.id) $('#sdjwt-present-id').value = result.id
+  } catch (error) {
+    toast('err', 'SD-JWT VC issuance failed', error.message)
+  } finally {
+    setBusy(button, false)
+  }
+}
+
+async function issueMdoc() {
+  const keyId = $('#mdoc-key').value
+  if (!keyId) {
+    toast('err', 'No issuer key', 'Create an ES256/ES384/ES512/EdDSA key first.')
+    return
+  }
+
+  const button = $('#issue-mdoc')
+  setBusy(button, true, 'Issuing…')
+
+  try {
+    const claims = parseJsonObject($('#mdoc-claims').value, 'mDL claims')
+    const holderKeyId = $('#mdoc-holder-key').value
+
+    const result = await api('/credentials/mdoc', {
+      method: 'POST',
+      body: {
+        keyId,
+        claims,
+        ...(holderKeyId ? { holderKeyId } : {}),
+      },
+    })
+
+    $('#mdoc-issue-result').innerHTML = `
+      ${kvRow('Record id', result.id)}
+      ${kvRow('docType', result.docType)}
+      ${kvRow('Algorithm', result.alg)}
+      ${kvRow('Issuer key', result.issuer.keyId)}
+      ${kvRow('Holder key', result.holderKeyId)}
+      ${kvRow('Trust anchor key', result.trustAnchorKeyId)}
+      <pre>${esc(JSON.stringify({ namespaces: result.namespaces, validityInfo: result.validityInfo }, null, 2))}</pre>
+      <pre>${esc(result.issuer.certificateChain.join('\n'))}</pre>`
+
+    toast('ok', 'mdoc issued', 'Signed with an OpenBao KMS key and stored in SQLite')
+    const p256 = state.info?.keyTypes.find((keyType) => keyType.id === 'p256')
+    if (p256) {
+      for (const [keyId, source] of [
+        [result.holderKeyId, 'mdoc holder'],
+        [result.trustAnchorKeyId, 'mdoc CA'],
+      ]) {
+        if (keyId && !state.keys.some((key) => key.keyId === keyId)) {
+          addKeyRecord({ keyId, store: 'transit' }, p256, source)
+        }
+      }
+      renderKeys()
+    }
+    await loadCredentials()
+  } catch (error) {
+    toast('err', 'mdoc issuance failed', error.message)
+  } finally {
+    setBusy(button, false)
+  }
+}
+
+async function verifyCredential(kind, id) {
+  const record =
+    kind === 'sd'
+      ? state.credentials.sdJwtVc.find((candidate) => candidate.id === id)
+      : state.credentials.mdoc.find((candidate) => candidate.id === id)
+
+  if (!record) {
+    toast('err', 'Credential not found', 'Refresh the list and try again.')
+    return
+  }
+
+  try {
+    const result =
+      kind === 'sd'
+        ? await api('/credentials/sd-jwt-vc/verify', {
+            method: 'POST',
+            body: { compact: record.compact },
+          })
+        : await api('/credentials/mdoc/verify', {
+            method: 'POST',
+            body: { id },
+          })
+
+    showCredentialResult(
+      result.valid,
+      result.valid
+        ? `Verified ${kind === 'sd' ? 'SD-JWT VC' : 'mdoc'} ${shortId(id)}`
+        : `Verification failed: ${result.error ?? 'unknown error'}`,
+      result,
+    )
+    toast(result.valid ? 'ok' : 'err', result.valid ? 'Verified' : 'Not verified', shortId(id))
+  } catch (error) {
+    showCredentialResult(false, `Verification failed: ${error.message}`, { error: error.message })
+    toast('err', 'Verification failed', error.message)
+  }
+}
+
+async function presentSdJwtVc() {
+  const id = $('#sdjwt-present-id').value
+  if (!id) {
+    toast('err', 'No credential', 'Issue or select an SD-JWT VC first.')
+    return
+  }
+
+  const button = $('#present-sd-jwt')
+  setBusy(button, true, 'Presenting…')
+
+  try {
+    const presentationFrame = parseJsonObject($('#sdjwt-presentation-frame').value, 'Presentation frame')
+    const withKeyBinding = $('#sdjwt-key-binding').value === 'yes'
+    const audience = 'https://verifier.example'
+    const nonce = `demo-nonce-${Date.now()}`
+
+    const result = await api('/credentials/sd-jwt-vc/present', {
+      method: 'POST',
+      body: {
+        id,
+        presentationFrame,
+        ...(withKeyBinding ? { verifierMetadata: { audience, nonce } } : {}),
+      },
+    })
+
+    const verification = await api('/credentials/sd-jwt-vc/verify', {
+      method: 'POST',
+      body: {
+        compact: result.presentation,
+        ...(withKeyBinding ? { keyBinding: { audience, nonce } } : {}),
+      },
+    })
+
+    $('#sdjwt-present-result').innerHTML = `
+      ${kvRow('Credential', shortId(id))}
+      ${kvRow('KB-JWT', result.keyBinding ? 'included' : 'not included')}
+      <pre>${esc(result.presentation)}</pre>`
+
+    showCredentialResult(
+      verification.valid,
+      verification.valid
+        ? `Presentation verified${withKeyBinding ? ' with holder key binding' : ''}`
+        : `Presentation verification failed: ${verification.error ?? 'unknown error'}`,
+      verification,
+    )
+    toast(verification.valid ? 'ok' : 'err', 'Presentation ready', result.keyBinding ? 'KB-JWT attached' : 'Selective disclosure only')
+  } catch (error) {
+    toast('err', 'Presentation failed', error.message)
+  } finally {
+    setBusy(button, false)
+  }
+}
+
+async function deleteCredential(kind, id) {
+  const label = kind === 'sd' ? 'SD-JWT VC' : 'mdoc'
+  if (!confirm(`Delete ${label} ${id}?\n\nThis removes the record from SQLite.`)) return
+
+  try {
+    await api(`${kind === 'sd' ? '/credentials/sd-jwt-vc' : '/credentials/mdoc'}/${encodeURIComponent(id)}`, {
+      method: 'DELETE',
+    })
+    toast('ok', `${label} deleted`, shortId(id))
+    await loadCredentials()
+  } catch (error) {
+    toast('err', 'Delete failed', error.message)
+  }
+}
+
+
 
 function renderActivity() {
   const count = $('#activity-count')
@@ -845,6 +1194,30 @@ function wire() {
   $('#load-dids').addEventListener('click', () => void loadDids())
 
   $('#run-x509').addEventListener('click', () => void runX509Demo())
+
+  $('#refresh-credentials').addEventListener('click', () => void loadCredentials())
+  $('#issue-sd-jwt').addEventListener('click', () => void issueSdJwtVc())
+  $('#issue-mdoc').addEventListener('click', () => void issueMdoc())
+  $('#present-sd-jwt').addEventListener('click', () => void presentSdJwtVc())
+  $('#reset-sd-jwt').addEventListener('click', () => {
+    $('#sdjwt-claims').value = SDJWT_DEFAULT_CLAIMS
+    $('#sdjwt-disclosure').value = SDJWT_DEFAULT_DISCLOSURE
+  })
+  $('#reset-mdoc').addEventListener('click', () => {
+    $('#mdoc-claims').value = MDOC_DEFAULT_CLAIMS
+  })
+  $('#sdjwt-presentation-frame').value = SDJWT_DEFAULT_PRESENTATION
+
+  $('#view-credentials').addEventListener('click', (event) => {
+    const button = event.target.closest('button[data-credential-action]')
+    if (!button) return
+    const { id } = button.dataset
+    const action = button.dataset.credentialAction
+    if (action === 'verify-sd') void verifyCredential('sd', id)
+    if (action === 'verify-mdoc') void verifyCredential('mdoc', id)
+    if (action === 'delete-sd') void deleteCredential('sd', id)
+    if (action === 'delete-mdoc') void deleteCredential('mdoc', id)
+  })
 
   $('#clear-activity').addEventListener('click', () => {
     state.activity = []

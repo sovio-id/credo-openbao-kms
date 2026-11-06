@@ -35,6 +35,7 @@
         <button class="nav-link" data-view="crypto">Random &amp; encrypt</button>
         <button class="nav-link" data-view="dids">DIDs</button>
         <button class="nav-link" data-view="x509">X.509</button>
+        <button class="nav-link" data-view="credentials">Credentials</button>
         <button class="nav-link" data-view="activity">Activity <span class="count" id="activity-count">0</span></button>
       </nav>
 
@@ -401,6 +402,169 @@ OpenBao keeps my signing keys, Node keeps this secret.</textarea>
             <span class="badge ok">ES256</span>
           </div>
           <div class="kv" id="x509-credential"></div>
+        </article>
+      </section>
+
+      <!-- Credentials -->
+      <section class="view" id="view-credentials" aria-labelledby="credentials-title">
+        <div class="view-head">
+          <div>
+            <p class="eyebrow">SdJwtVcModule / MdocModule</p>
+            <h1 id="credentials-title">Credentials</h1>
+            <p class="view-copy">
+              Issue, store and verify a selective-disclosure SD-JWT VC and an ISO 18013-5 mdoc (mDL). Every signature is
+              produced by an OpenBao KMS key: the SD-JWT VC uses a did:jwk issuer and the mdoc uses an X.509 leaf
+              certificate bound to the selected key.
+            </p>
+          </div>
+          <button class="btn ghost" id="refresh-credentials" type="button">Refresh</button>
+        </div>
+
+        <div class="grid two">
+          <article class="card">
+            <div class="card-head">
+              <h2>SD-JWT VC</h2>
+              <span class="badge ok">did:jwk issuer</span>
+            </div>
+            <label class="field">
+              <span>Issuer key</span>
+              <select id="sdjwt-key"></select>
+            </label>
+            <label class="field">
+              <span>Holder key <em>optional — adds a cnf key binding</em></span>
+              <select id="sdjwt-holder-key"></select>
+            </label>
+            <label class="field">
+              <span>Claims <em>JSON</em></span>
+              <textarea id="sdjwt-claims" rows="7" spellcheck="false">{
+  "given_name": "Alex",
+  "family_name": "Doe",
+  "birthdate": "1985-04-12",
+  "nationalities": ["IN"]
+}</textarea>
+            </label>
+            <label class="field">
+              <span>Selective disclosure frame <em>JSON</em></span>
+              <textarea id="sdjwt-disclosure" rows="4" spellcheck="false">{
+  "_sd": ["given_name", "family_name", "birthdate"]
+}</textarea>
+            </label>
+            <div class="button-row">
+              <button class="btn primary" id="issue-sd-jwt" type="button">Issue &amp; store</button>
+              <button class="btn ghost" id="reset-sd-jwt" type="button">Reset claims</button>
+            </div>
+            <div class="result-block kv" id="sdjwt-issue-result">
+              <span class="muted">Issue a credential to see its compact serialization and decoded claims.</span>
+            </div>
+          </article>
+
+          <article class="card">
+            <div class="card-head">
+              <h2>mdoc (mDL)</h2>
+              <span class="badge violet">X.509 issuer</span>
+            </div>
+            <label class="field">
+              <span>Issuer key</span>
+              <select id="mdoc-key"></select>
+            </label>
+            <label class="field">
+              <span>Holder key <em>optional — a P-256 key is created when empty</em></span>
+              <select id="mdoc-holder-key"></select>
+            </label>
+            <label class="field">
+              <span>mDL claims <em>JSON</em></span>
+              <textarea id="mdoc-claims" rows="10" spellcheck="false">{
+  "given_name": "Alex",
+  "family_name": "Doe",
+  "birth_date": "1985-04-12",
+  "issuing_country": "IN",
+  "issuing_authority": "OpenBao Demo Issuer",
+  "document_number": "OB-DEMO-0001",
+  "age_over_18": true
+}</textarea>
+            </label>
+            <div class="button-row">
+              <button class="btn primary" id="issue-mdoc" type="button">Issue &amp; store</button>
+              <button class="btn ghost" id="reset-mdoc" type="button">Reset claims</button>
+            </div>
+            <div class="result-block kv" id="mdoc-issue-result">
+              <span class="muted">Issue an mdoc to see its namespaces, validity and certificate chain.</span>
+            </div>
+          </article>
+        </div>
+
+        <article class="card">
+          <div class="card-head">
+            <h2>Stored credentials</h2>
+            <span class="muted">Persisted in SQLite by Drizzle storage</span>
+          </div>
+          <div class="table-wrap">
+            <table class="table" id="sdjwt-table">
+              <thead>
+                <tr>
+                  <th>SD-JWT VC</th>
+                  <th>vct</th>
+                  <th>Issuer</th>
+                  <th class="right">Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td colspan="4" class="muted">Open this section to load credentials.</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          <div class="table-wrap credential-table">
+            <table class="table" id="mdoc-table">
+              <thead>
+                <tr>
+                  <th>mdoc</th>
+                  <th>docType</th>
+                  <th>Valid until</th>
+                  <th class="right">Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td colspan="4" class="muted">Open this section to load credentials.</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          <div class="result-block" id="credential-verify-result">
+            <span class="muted">Verify or present a credential to see the result here.</span>
+          </div>
+        </article>
+
+        <article class="card">
+          <div class="card-head"><h2>Present a stored SD-JWT VC</h2></div>
+          <div class="form-grid compact">
+            <label class="field">
+              <span>Credential</span>
+              <select id="sdjwt-present-id"></select>
+            </label>
+            <label class="field">
+              <span>Presentation frame <em>JSON</em></span>
+              <textarea id="sdjwt-presentation-frame" rows="3" spellcheck="false">{
+  "given_name": true,
+  "family_name": true
+}</textarea>
+            </label>
+            <label class="field">
+              <span>Key binding <em>requires a holder-bound credential</em></span>
+              <select id="sdjwt-key-binding">
+                <option value="no">No KB-JWT</option>
+                <option value="yes">Add KB-JWT (audience + nonce)</option>
+              </select>
+            </label>
+          </div>
+          <div class="button-row">
+            <button class="btn primary" id="present-sd-jwt" type="button">Create presentation</button>
+          </div>
+          <div class="result-block" id="sdjwt-present-result">
+            <span class="muted">Create a selective presentation and verify it again.</span>
+          </div>
         </article>
       </section>
 

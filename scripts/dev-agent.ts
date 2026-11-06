@@ -40,10 +40,19 @@ import {
   ConsoleLogger,
   CredoWebCrypto,
   LogLevel,
+  MdocModule,
+  MdocRecord,
+  SdJwtVcModule,
+  SdJwtVcRecord,
   TypedArrayEncoder,
   X509KeyUsage,
   X509Service,
+  isMdocSupportedSignatureAlgorithm,
   type DidCreateResult,
+  type IDisclosureFrame,
+  type IPresentationFrame,
+  type MdocNameSpaces,
+  type SdJwtVcPayload,
 } from '@credo-ts/core'
 import {
   KeyManagementModule,
@@ -199,6 +208,11 @@ const DEMO_KEY_TYPES: DemoKeyType[] = [
   },
 ]
 
+/** Demo credential types. Kept here so the UI and API share one definition. */
+const SDJWT_VCT = 'https://credo.js.org/demo/identity'
+const MDOC_DOCTYPE = 'org.iso.18013.5.1.mDL'
+const MDOC_NAMESPACE = 'org.iso.18013.5.1'
+
 class HttpError extends Error {
   public readonly status: number
 
@@ -337,6 +351,8 @@ async function main(): Promise<void> {
         backends: [openbao, node],
         defaultBackend: 'openbao',
       }),
+      sdJwtVc: new SdJwtVcModule(),
+      mdoc: new MdocModule(),
     },
   })
 
@@ -515,6 +531,177 @@ async function main(): Promise<void> {
     }
   }
 
+  /**
+   * Resolve a KMS key that can be used to sign credentials.
+   */
+  const resolveCredentialKey = async (keyId: string): Promise<{ keyId: string; publicJwk: PublicJwk }> => {
+    const publicJwk = await agent.kms.getPublicKey({ keyId })
+    if (!publicJwk) throw new HttpError(404, `No key with id '${keyId}'`)
+    const resolved = PublicJwk.fromUnknown(publicJwk)
+    if (resolved.supportedSignatureAlgorithms.length === 0) {
+      throw new HttpError(400, `Key '${keyId}' does not support signatures and cannot be used for credentials`)
+    }
+    return { keyId, publicJwk: resolved }
+  }
+
+  const createP256Key = async (): Promise<{ keyId: string; publicJwk: PublicJwk }> => {
+    const created = await agent.kms.createKey({ type: { kty: 'EC', crv: 'P-256' } })
+    const publicJwk = await agent.kms.getPublicKey({ keyId: created.keyId })
+    if (!publicJwk) throw new HttpError(500, `Created key '${created.keyId}' has no public key`)
+    return { keyId: created.keyId, publicJwk: PublicJwk.fromUnknown(publicJwk) }
+  }
+
+  /**
+   * `did:jwk` embeds the public key in the DID, and the created DID record keeps the
+   * KMS key id. That is what lets the SD-JWT VC module sign through OpenBao.
+   */
+  const createJwkDid = async (keyId: string): Promise<string> => {
+    const { didState } = await agent.dids.create({ method: 'jwk', options: { keyId } })
+    if (didState.state === 'failed') {
+      throw new HttpError(400, `Unable to create did:jwk for '${keyId}': ${didState.reason}`)
+    }
+    if (didState.state !== 'finished') {
+      throw new HttpError(500, `did:jwk creation for '${keyId}' did not finish (state '${didState.state}')`)
+    }
+    return didState.did
+  }
+
+  const issueSdJwtVc = async (body: Record<string, unknown>): Promise<Record<string, unknown>> => {
+    const key = await resolveCredentialKey(asString(body.keyId, 'keyId'))
+    const claims = body.claims ? asRecord(body.claims, 'claims') : {}
+    const disclosureFrame = body.disclosureFrame ? (body.disclosureFrame as IDisclosureFrame) : undefined
+    const holderKeyId = body.holderKeyId ? asString(body.holderKeyId, 'holderKeyId') : undefined
+
+    const issuerDid = await createJwkDid(key.keyId)
+    const holderDid = holderKeyId ? await createJwkDid(holderKeyId) : undefined
+    const holder = holderDid ? { method: 'did' as const, didUrl: `${holderDid}#0` } : undefined
+
+    const sdJwtVc = await agent.sdJwtVc.sign({
+      payload: { ...claims, vct: SDJWT_VCT } as SdJwtVcPayload,
+      issuer: { method: 'did', didUrl: `${issuerDid}#0` },
+      ...(holder ? { holder } : {}),
+      ...(disclosureFrame ? { disclosureFrame } : {}),
+    })
+    const record = await agent.sdJwtVc.store({ record: SdJwtVcRecord.fromSdJwtVc(sdJwtVc) })
+
+    return {
+      id: record.id,
+      vct: SDJWT_VCT,
+      issuerDid,
+      ...(holderDid ? { holderDid } : {}),
+      compact: sdJwtVc.compact,
+      header: sdJwtVc.header,
+      payload: sdJwtVc.payload,
+      prettyClaims: sdJwtVc.prettyClaims,
+    }
+  }
+
+  const issueMdoc = async (body: Record<string, unknown>): Promise<Record<string, unknown>> => {
+    const issuerKey = await resolveCredentialKey(asString(body.keyId, 'keyId'))
+    const alg = issuerKey.publicJwk.supportedSignatureAlgorithms.find(isMdocSupportedSignatureAlgorithm)
+    if (!alg) {
+      throw new HttpError(400, `Key '${issuerKey.keyId}' cannot sign mDocs. Use ES256, ES384, ES512 or EdDSA.`)
+    }
+
+    const holderKeyId = body.holderKeyId ? asString(body.holderKeyId, 'holderKeyId') : undefined
+    const holder = holderKeyId ? await resolveCredentialKey(holderKeyId) : await createP256Key()
+    const ca = await createP256Key()
+
+    const now = new Date()
+    const validity = {
+      notBefore: new Date(now.getTime() - 60_000),
+      notAfter: new Date(now.getTime() + 3_600_000),
+    }
+    const caCert = await X509Service.createCertificate(agent.context, {
+      authorityKey: ca.publicJwk,
+      issuer: { commonName: 'OpenBao Demo mDL Root CA', countryName: 'IN' },
+      validity,
+      extensions: {
+        basicConstraints: { ca: true, pathLenConstraint: 0 },
+        keyUsage: { usages: [X509KeyUsage.KeyCertSign, X509KeyUsage.CrlSign] },
+      },
+    })
+    const leafCert = await X509Service.createCertificate(agent.context, {
+      authorityKey: ca.publicJwk,
+      subjectPublicKey: issuerKey.publicJwk,
+      issuer: { commonName: 'OpenBao Demo mDL Root CA', countryName: 'IN' },
+      subject: { commonName: 'OpenBao Demo mDL Issuer', organizationalUnit: 'Credentials', countryName: 'IN' },
+      validity,
+      extensions: {
+        basicConstraints: { ca: false },
+        keyUsage: { usages: [X509KeyUsage.DigitalSignature] },
+      },
+    })
+
+    const defaults = {
+      given_name: 'Alex',
+      family_name: 'Doe',
+      birth_date: '1985-04-12',
+      issue_date: now.toISOString().slice(0, 10),
+      expiry_date: validity.notAfter.toISOString().slice(0, 10),
+      issuing_country: 'IN',
+      issuing_authority: 'OpenBao Demo Issuer',
+      document_number: `OB-${String(now.getTime()).slice(-8)}`,
+      age_over_18: true,
+    }
+    const claims = body.claims ? asRecord(body.claims, 'claims') : {}
+    const namespaces: MdocNameSpaces = { [MDOC_NAMESPACE]: { ...defaults, ...claims } }
+
+    const mdoc = await agent.mdoc.sign({
+      docType: MDOC_DOCTYPE,
+      validityInfo: {
+        signed: now,
+        validFrom: now,
+        validUntil: validity.notAfter,
+      },
+      namespaces,
+      issuerCertificate: [leafCert, caCert],
+      holderKey: holder.publicJwk,
+      keyAuthorizations: { namespaces: [MDOC_NAMESPACE] },
+    })
+    mdoc.deviceKeyId = holder.keyId
+
+    const record = await agent.mdoc.store({ record: MdocRecord.fromMdoc(mdoc) })
+    const caPem = caCert.toString('pem')
+    await agent.genericRecords.save({
+      id: `mdoc-trust-${record.id}`,
+      content: {
+        trustedCertificatePem: caPem,
+        leafCertificatePem: leafCert.toString('pem'),
+        issuerKeyId: issuerKey.keyId,
+        holderKeyId: holder.keyId,
+      },
+    })
+
+    return {
+      id: record.id,
+      docType: MDOC_DOCTYPE,
+      namespace: MDOC_NAMESPACE,
+      alg: mdoc.alg,
+      base64Url: mdoc.base64Url,
+      namespaces: mdoc.issuerSignedNamespaces,
+      validityInfo: {
+        signed: mdoc.validityInfo.signed.toISOString(),
+        validFrom: mdoc.validityInfo.validFrom.toISOString(),
+        validUntil: mdoc.validityInfo.validUntil.toISOString(),
+      },
+      issuer: {
+        keyId: issuerKey.keyId,
+        certificate: leafCert.toString('pem'),
+        certificateChain: [leafCert.toString('pem'), caPem],
+      },
+      holderKeyId: holder.keyId,
+      trustAnchorKeyId: ca.keyId,
+    }
+  }
+
+  const findMdocRecord = async (id: string) => {
+    const records = await agent.mdoc.getAll()
+    const record = records.find((candidate) => candidate.id === id)
+    if (!record) throw new HttpError(404, `No mdoc with id '${id}'`)
+    return record
+  }
+
   const server = createServer(async (request, response) => {
     response.setHeader('access-control-allow-origin', '*')
     response.setHeader('access-control-allow-headers', 'content-type')
@@ -582,6 +769,14 @@ async function main(): Promise<void> {
             },
           },
           keyTypes: DEMO_KEY_TYPES,
+          credentials: {
+            sdJwtVc: { vct: SDJWT_VCT, issuer: 'did:jwk backed by an OpenBao KMS key' },
+            mdoc: {
+              docType: MDOC_DOCTYPE,
+              namespace: MDOC_NAMESPACE,
+              issuer: 'X.509 leaf certificate backed by an OpenBao KMS key',
+            },
+          },
         })
         return
       }
@@ -748,6 +943,166 @@ async function main(): Promise<void> {
         return
       }
 
+      if (request.method === 'GET' && path === '/credentials') {
+        const sdJwtVcRecords = await agent.sdJwtVc.getAll()
+        const mdocRecords = await agent.mdoc.getAll()
+        sendJson(response, 200, {
+          sdJwtVc: sdJwtVcRecords.map((record) => {
+            const credential = record.firstCredential
+            return {
+              id: record.id,
+              createdAt: record.createdAt,
+              vct: credential.payload.vct,
+              issuer: credential.issuer,
+              holder: credential.holder,
+              alg: credential.header.alg,
+              compact: credential.compact,
+              payload: credential.payload,
+              prettyClaims: credential.prettyClaims,
+            }
+          }),
+          mdoc: mdocRecords.map((record) => {
+            const credential = record.firstCredential
+            return {
+              id: record.id,
+              createdAt: record.createdAt,
+              docType: credential.docType,
+              alg: credential.alg,
+              base64Url: credential.base64Url,
+              namespaces: credential.issuerSignedNamespaces,
+              validityInfo: {
+                signed: credential.validityInfo.signed.toISOString(),
+                validFrom: credential.validityInfo.validFrom.toISOString(),
+                validUntil: credential.validityInfo.validUntil.toISOString(),
+              },
+            }
+          }),
+        })
+        return
+      }
+
+      if (request.method === 'POST' && path === '/credentials/sd-jwt-vc') {
+        const body = await readJson(request)
+        sendJson(response, 201, await issueSdJwtVc(body))
+        return
+      }
+
+      if (request.method === 'POST' && path === '/credentials/sd-jwt-vc/verify') {
+        const body = await readJson(request)
+        const keyBindingInput = body.keyBinding ? asRecord(body.keyBinding, 'keyBinding') : undefined
+        const keyBinding = keyBindingInput
+          ? {
+              audience: asString(keyBindingInput.audience, 'keyBinding.audience'),
+              nonce: asString(keyBindingInput.nonce, 'keyBinding.nonce'),
+            }
+          : undefined
+
+        const result = await agent.sdJwtVc.verify({
+          compactSdJwtVc: asString(body.compact, 'compact'),
+          ...(keyBinding ? { keyBinding } : {}),
+          ...(body.requiredClaimKeys ? { requiredClaimKeys: body.requiredClaimKeys as string[] } : {}),
+        })
+
+        if (!result.isValid) {
+          sendJson(response, 200, { valid: false, error: result.error.message })
+          return
+        }
+
+        sendJson(response, 200, {
+          valid: true,
+          vct: result.sdJwtVc.payload.vct,
+          issuer: result.sdJwtVc.issuer,
+          holder: result.sdJwtVc.holder,
+          header: result.sdJwtVc.header,
+          payload: result.sdJwtVc.payload,
+          prettyClaims: result.sdJwtVc.prettyClaims,
+        })
+        return
+      }
+
+      if (request.method === 'POST' && path === '/credentials/sd-jwt-vc/present') {
+        const body = await readJson(request)
+        const id = body.id ? asString(body.id, 'id') : undefined
+        const compact = id
+          ? (await agent.sdJwtVc.getAll()).find((record) => record.id === id)?.firstCredential.compact
+          : body.compact
+            ? asString(body.compact, 'compact')
+            : undefined
+        if (!compact) throw new HttpError(404, `No SD-JWT VC found for '${id ?? 'the supplied compact value'}'`)
+
+        const verifierMetadataInput = body.verifierMetadata
+          ? asRecord(body.verifierMetadata, 'verifierMetadata')
+          : undefined
+        const verifierMetadata = verifierMetadataInput
+          ? {
+              audience: asString(verifierMetadataInput.audience, 'verifierMetadata.audience'),
+              nonce: asString(verifierMetadataInput.nonce, 'verifierMetadata.nonce'),
+              issuedAt: Math.floor(Date.now() / 1000),
+            }
+          : undefined
+
+        const presentation = await agent.sdJwtVc.present({
+          sdJwtVc: compact,
+          ...(body.presentationFrame ? { presentationFrame: body.presentationFrame as IPresentationFrame } : {}),
+          ...(verifierMetadata ? { verifierMetadata } : {}),
+        })
+
+        sendJson(response, 200, {
+          id,
+          presentation,
+          keyBinding: Boolean(verifierMetadata),
+        })
+        return
+      }
+
+      if (request.method === 'DELETE' && path.startsWith('/credentials/sd-jwt-vc/')) {
+        const id = decodeURIComponent(path.slice('/credentials/sd-jwt-vc/'.length))
+        const record = (await agent.sdJwtVc.getAll()).find((candidate) => candidate.id === id)
+        if (!record) throw new HttpError(404, `No SD-JWT VC with id '${id}'`)
+        await agent.sdJwtVc.deleteById(id)
+        sendJson(response, 200, { id, deleted: true })
+        return
+      }
+
+      if (request.method === 'POST' && path === '/credentials/mdoc') {
+        const body = await readJson(request)
+        sendJson(response, 201, await issueMdoc(body))
+        return
+      }
+
+      if (request.method === 'POST' && path === '/credentials/mdoc/verify') {
+        const body = await readJson(request)
+        const id = asString(body.id, 'id')
+        const record = await findMdocRecord(id)
+        const trustRecord = await agent.genericRecords.findById(`mdoc-trust-${id}`)
+        if (!trustRecord) throw new HttpError(404, `No trust anchor stored for mdoc '${id}'`)
+
+        const mdoc = record.firstCredential
+        const result = await agent.mdoc.verify(mdoc, {
+          trustedCertificates: [asString(trustRecord.content.trustedCertificatePem, 'trustedCertificatePem')],
+        })
+
+        sendJson(response, 200, {
+          id,
+          valid: result.isValid,
+          ...(result.isValid ? {} : { error: result.error }),
+          docType: mdoc.docType,
+          alg: mdoc.alg,
+          namespaces: mdoc.issuerSignedNamespaces,
+        })
+        return
+      }
+
+      if (request.method === 'DELETE' && path.startsWith('/credentials/mdoc/')) {
+        const id = decodeURIComponent(path.slice('/credentials/mdoc/'.length))
+        const record = await findMdocRecord(id)
+        await agent.mdoc.deleteById(record.id)
+        const trustRecord = await agent.genericRecords.findById(`mdoc-trust-${id}`)
+        if (trustRecord) await agent.genericRecords.delete(trustRecord)
+        sendJson(response, 200, { id, deleted: true })
+        return
+      }
+
       if (request.method === 'GET' && path === '/dids') {
         const records = await agent.dids.getCreatedDids()
         sendJson(
@@ -793,7 +1148,8 @@ async function main(): Promise<void> {
     console.log(`  OpenBao: ${OPENBAO_ADDRESS} (KV mount: ${KV_MOUNT})`)
     console.log(`  SQLite:  ${SQLITE_PATH}`)
     console.log('  Endpoints: /health, /info, /keys, /keys/import, /sign, /verify, /dids,')
-    console.log('             /random-bytes, /crypto/encrypt, /crypto/decrypt, /x509/demo, /demo/jwk')
+    console.log('             /random-bytes, /crypto/encrypt, /crypto/decrypt, /x509/demo, /demo/jwk,')
+    console.log('             /credentials, /credentials/sd-jwt-vc, /credentials/mdoc')
   })
 
   const shutdown = async (): Promise<void> => {

@@ -867,6 +867,24 @@ select {
   font-size: 0.7rem;
 }
 
+/* Credentials */
+
+#sdjwt-issue-result,
+#mdoc-issue-result,
+#sdjwt-present-result,
+#credential-verify-result {
+  margin-top: 0.75rem;
+}
+
+.credential-table {
+  margin-top: 0.75rem;
+}
+
+#sdjwt-present-result pre,
+#credential-verify-result pre {
+  max-height: 260px;
+}
+
 /* Dialog and toasts */
 
 .json-dialog {

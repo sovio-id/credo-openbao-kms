@@ -15,7 +15,8 @@ Run `npm run live-check` to reproduce it (see [Running the check](#running-the-c
 or start the full local stack with `docker compose up -d --build`
 (see [Local development with Docker Compose](#local-development-with-docker-compose)).
 The stack includes a development-only demo web app at
-[http://localhost:3001](http://localhost:3001).
+[http://localhost:3001](http://localhost:3001), including SD-JWT VC and mdoc
+issuance/verification with OpenBao-backed keys.
 
 ---
 
@@ -605,6 +606,12 @@ The UI walks through all Credo KMS features this stack supports:
   keys, and inspect the DID records persisted in SQLite.
 - **X.509** — generate a CA and leaf key in OpenBao, issue and validate
   certificates, and sign a credential payload with the leaf key.
+- **Credentials** — issue, store and verify an SD-JWT VC and an ISO 18013-5
+  mdoc (mDL). The SD-JWT VC uses a `did:jwk` issuer and optionally binds the
+  holder key for KB-JWT presentations. The mdoc uses an X.509 CA and leaf
+  certificate whose signing key is the selected OpenBao key. Both records are
+  persisted in SQLite, and the mdoc trust anchor is stored alongside the record
+  so verification survives restarts.
 - **Activity** — the raw HTTP request log, including latency and status.
 
 The key catalog is stored in the browser's `localStorage`; the key material
@@ -645,7 +652,12 @@ The API also exposes `POST /keys/import`, `GET|DELETE /keys/:id`,
 `GET /info`, `GET /demo/jwk?type=...`, `POST /random-bytes`,
 `POST /crypto/encrypt`, `POST /crypto/decrypt`, `POST /x509/demo`,
 `POST /sign`, `POST /verify`, and `GET|POST /dids` (`key`, `jwk` or `peer`).
-See `scripts/dev-agent.ts` for the exact request shapes.
+Credential endpoints are `GET /credentials`,
+`POST /credentials/sd-jwt-vc`, `POST /credentials/sd-jwt-vc/verify`,
+`POST /credentials/sd-jwt-vc/present`, `DELETE /credentials/sd-jwt-vc/:id`,
+`POST /credentials/mdoc`, `POST /credentials/mdoc/verify` and
+`DELETE /credentials/mdoc/:id`. See `scripts/dev-agent.ts` for the exact
+request shapes.
 
 State survives `docker compose restart` / `docker compose stop` and
 `docker compose start`. To throw everything away:
