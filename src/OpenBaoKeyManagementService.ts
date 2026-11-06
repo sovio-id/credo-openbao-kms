@@ -15,7 +15,14 @@
  * limitations under the License.
  */
 
-import { constants, createPublicKey, generateKeyPairSync, type KeyObject, verify as cryptoVerify } from 'node:crypto'
+import {
+  constants,
+  createHash,
+  createPublicKey,
+  generateKeyPairSync,
+  type KeyObject,
+  verify as cryptoVerify,
+} from 'node:crypto'
 
 import { utils, type AgentContext } from '@credo-ts/core'
 import {
@@ -49,6 +56,7 @@ import {
   OpenBaoNotFoundError,
   OpenBaoRequestError,
   type OpenBaoClient,
+  type OpenBaoHealth,
   type OpenBaoKeyType,
   type OpenBaoTransitKey,
 } from './OpenBaoClient.js'
@@ -63,10 +71,29 @@ import {
 const BACKEND_NAME = 'openbao'
 
 /**
- * Transit GenericNameRegex: must start and end with a word character.
- * Names longer than 128 chars are encoded instead of used directly.
+ * Every key id returned by this backend is prefixed so it can never collide
+ * with a key id from Askar or another local backend. Credo routes key-based
+ * operations by asking each backend for the key in registration order, and
+ * Askar keeps the `kid` of an imported JWK verbatim, so without this prefix a
+ * key imported into both stores would silently resolve to Askar.
  */
-const DIRECT_KEY_NAME = /^[A-Za-z0-9_](?:[A-Za-z0-9_.-]*[A-Za-z0-9_])?$/
+export const OPENBAO_KEY_ID_PREFIX = 'ob_'
+
+/** Namespace a Credo key id for OpenBao. Idempotent, so callers can pass an already namespaced id. */
+export function openBaoKeyId(keyId: string): string {
+  return keyId.startsWith(OPENBAO_KEY_ID_PREFIX) ? keyId : `${OPENBAO_KEY_ID_PREFIX}${keyId}`
+}
+
+/** Transit generic names are limited to 128 characters. */
+const MAX_KEY_NAME_LENGTH = 128
+
+/**
+ * Resolve the isolation scope for an agent context. The default combines the
+ * deployment id with Credo's context correlation id (`default` for the root
+ * agent, `tenant-<id>` for a tenant), so two tenants that happen to use the
+ * same key id never share a Transit key.
+ */
+export type KeyNameScopeResolver = (agentContext: AgentContext | undefined) => string
 
 interface SignAlgorithm {
   nodeHash: string | null
@@ -124,8 +151,20 @@ export interface OpenBaoKeyManagementServiceOptions {
   /** A client for the OpenBao Transits engine. */
   client: OpenBaoClient
   /**
-   * Prefix used when a key id is not a valid Transit key name and has to be
-   * base64url encoded. Defaults to `credo-`.
+   * Deployment identifier used to isolate this agent-controller from other
+   * deployments that share the OpenBao cluster. Defaults to no deployment
+   * prefix, i.e. the scope is only the context correlation id.
+   */
+  deploymentId?: string
+  /**
+   * Override how a scope is derived from an agent context. The default is
+   * `<deploymentId>:<contextCorrelationId>`, or just the context correlation
+   * id when no deployment id is configured.
+   */
+  scopeResolver?: KeyNameScopeResolver
+  /**
+   * Prefix for the generated Transit key name. The full name is
+   * `<prefix>_<scopeHash>_<base64url(keyId)>`. Defaults to `ac`.
    */
   keyNamePrefix?: string
   /**
@@ -135,10 +174,17 @@ export interface OpenBaoKeyManagementServiceOptions {
    */
   publicKeyCacheTtlMs?: number
   /**
-   * Use the key id as the Transit key name when it is a valid name (UUIDs are).
-   * Defaults to `true`. Disable to always base64url encode key ids.
+   * How long a "key not found" result is cached, in milliseconds. Without
+   * this, a key that belongs to another backend costs a 404 on every route
+   * lookup. Defaults to 30 seconds. Set to `0` to disable.
    */
-  useDirectKeyNames?: boolean
+  negativeCacheTtlMs?: number
+  /**
+   * Allow this backend to create, import, and delete keys. Defaults to `true`.
+   * Set to `false` for a controlled rollback: existing keys can still sign and
+   * verify, but new keys go to the next backend.
+   */
+  writeEnabled?: boolean
   /**
    * KV v2 mount used for key types Transit cannot represent (secp256k1 and
    * X25519). Leave unset to route those key types to another backend such as
@@ -164,38 +210,76 @@ export class OpenBaoKeyManagementService implements KeyManagementService {
   public readonly backend = BACKEND_NAME
 
   readonly #client: OpenBaoClient
+  readonly #deploymentId?: string
+  readonly #scopeResolver: KeyNameScopeResolver
   readonly #keyNamePrefix: string
   readonly #publicKeyCacheTtlMs: number
-  readonly #useDirectKeyNames: boolean
+  readonly #negativeCacheTtlMs: number
+  readonly #writeEnabled: boolean
   readonly #kvMount?: string
   readonly #kvPathPrefix: string
   readonly #publicKeyCache = new Map<string, { publicJwk: KmsJwkPublic; expiresAt: number }>()
+  readonly #negativeCache = new Map<string, number>()
 
   public constructor(options: OpenBaoKeyManagementServiceOptions) {
     this.#client = options.client
-    this.#keyNamePrefix = options.keyNamePrefix ?? 'credo-'
+    if (options.deploymentId) this.#deploymentId = options.deploymentId
+    this.#scopeResolver =
+      options.scopeResolver ??
+      ((agentContext) => this.scopeForCorrelationId(agentContext?.contextCorrelationId ?? 'default'))
+    this.#keyNamePrefix = options.keyNamePrefix ?? 'ac'
     this.#publicKeyCacheTtlMs = options.publicKeyCacheTtlMs ?? 5 * 60 * 1000
-    this.#useDirectKeyNames = options.useDirectKeyNames ?? true
+    this.#negativeCacheTtlMs = options.negativeCacheTtlMs ?? 30 * 1000
+    this.#writeEnabled = options.writeEnabled ?? true
     if (options.kvMount) this.#kvMount = options.kvMount.replace(/^\/+|\/+$/g, '')
     this.#kvPathPrefix = (options.kvPathPrefix ?? 'credo-keys').replace(/^\/+|\/+$/g, '')
   }
 
-  /** The Transit key name for a Credo key id. Deterministic in both directions in practice. */
-  public keyName(keyId: string): string {
-    if (this.#useDirectKeyNames && DIRECT_KEY_NAME.test(keyId) && keyId.length <= 128) return keyId
-    return `${this.#keyNamePrefix}${Buffer.from(keyId, 'utf8').toString('base64url')}`
+  /**
+   * The Transit key name for a Credo key id. The name includes a hash of the
+   * isolation scope, so the same key id in two tenants maps to two keys.
+   */
+  public keyName(keyId: string): string
+  public keyName(agentContext: AgentContext, keyId: string): string
+  public keyName(agentContextOrKeyId: AgentContext | string, maybeKeyId?: string): string {
+    const keyId = typeof agentContextOrKeyId === 'string' ? agentContextOrKeyId : maybeKeyId
+    if (keyId === undefined) throw new KeyManagementError('A key id is required to build a Transit key name')
+    const agentContext = typeof agentContextOrKeyId === 'string' ? undefined : agentContextOrKeyId
+    return this.#keyName(this.#scopeResolver(agentContext), keyId)
+  }
+
+  /** The isolation scope for an agent context. */
+  public scopeFor(agentContext: AgentContext): string {
+    return this.#scopeResolver(agentContext)
+  }
+
+  /** The isolation scope for a Credo context correlation id (`tenant-<id>`, `default`). */
+  public scopeForCorrelationId(correlationId: string): string {
+    return this.#deploymentId ? `${this.#deploymentId}:${correlationId}` : correlationId
   }
 
   public clearPublicKeyCache(): void {
     this.#publicKeyCache.clear()
+    this.#negativeCache.clear()
+  }
+
+  /** Read OpenBao's health. Throws `OpenBaoSealedError` or `OpenBaoUnreachableError`. */
+  public health(): Promise<OpenBaoHealth> {
+    return this.#client.health()
+  }
+
+  /** Fail fast at startup when OpenBao is sealed, uninitialised, or unreachable. */
+  public assertHealthy(): Promise<void> {
+    return this.#client.assertHealthy()
   }
 
   public isOperationSupported(_agentContext: AgentContext, operation: KmsOperation): boolean {
     switch (operation.operation) {
       case 'createKey':
         return (
-          openBaoKeyTypeForCreate(operation.type) !== undefined ||
-          (this.#kvMount !== undefined && openBaoKvKeyTypeForCreate(operation.type) !== undefined)
+          this.#writeEnabled &&
+          (openBaoKeyTypeForCreate(operation.type) !== undefined ||
+            (this.#kvMount !== undefined && openBaoKvKeyTypeForCreate(operation.type) !== undefined))
         )
       case 'sign':
       case 'verify':
@@ -205,11 +289,13 @@ export class OpenBaoKeyManagementService implements KeyManagementService {
         )
       case 'importKey':
         return (
-          openBaoKeyTypeForImport(operation.privateJwk) !== undefined ||
-          (this.#kvMount !== undefined && openBaoKvKeyTypeForImport(operation.privateJwk) !== undefined)
+          this.#writeEnabled &&
+          (openBaoKeyTypeForImport(operation.privateJwk) !== undefined ||
+            (this.#kvMount !== undefined && openBaoKvKeyTypeForImport(operation.privateJwk) !== undefined))
         )
       case 'deleteKey':
-        return true
+        // A read-only deployment leaves deletion to a backend that owns the key.
+        return this.#writeEnabled
       // Not implemented on purpose. The Node.js or Askar backend handles these.
       case 'encrypt':
       case 'decrypt':
@@ -218,22 +304,30 @@ export class OpenBaoKeyManagementService implements KeyManagementService {
     }
   }
 
-  public async getPublicKey(_agentContext: AgentContext, keyId: string): Promise<KmsJwkPublic | null> {
-    const cached = this.#publicKeyCache.get(keyId)
+  public async getPublicKey(agentContext: AgentContext, keyId: string): Promise<KmsJwkPublic | null> {
+    const scope = this.#scopeResolver(agentContext)
+    const cacheKey = cacheKeyFor(scope, keyId)
+
+    const cached = this.#publicKeyCache.get(cacheKey)
     if (cached && cached.expiresAt > Date.now()) return cached.publicJwk
+    const negativeExpiry = this.#negativeCache.get(cacheKey)
+    if (negativeExpiry && negativeExpiry > Date.now()) return null
 
     let key: OpenBaoTransitKey
     try {
-      key = await this.#client.getKey(this.keyName(keyId))
+      key = await this.#client.getKey(this.keyName(agentContext, keyId))
     } catch (error) {
       if (!(error instanceof OpenBaoNotFoundError)) throw error
 
       // Not in Transit. secp256k1/X25519 keys may live in the KV fallback.
-      const record = await this.#readKvKey(keyId)
-      if (!record) return null
+      const record = await this.#readKvKey(agentContext, keyId)
+      if (!record) {
+        this.#cacheNotFound(scope, keyId)
+        return null
+      }
 
       const publicJwk = { ...record.publicJwk, kid: keyId } as KmsJwkPublic
-      this.#cachePublicKey(keyId, publicJwk)
+      this.#cachePublicKey(scope, keyId, publicJwk)
       return publicJwk
     }
 
@@ -244,16 +338,18 @@ export class OpenBaoKeyManagementService implements KeyManagementService {
       )
     }
 
-    this.#cachePublicKey(keyId, publicJwk)
+    this.#cachePublicKey(scope, keyId, publicJwk)
     return publicJwk
   }
 
   public async createKey<Type extends KmsCreateKeyType>(
-    _agentContext: AgentContext,
+    agentContext: AgentContext,
     options: KmsCreateKeyOptions<Type>,
   ): Promise<KmsCreateKeyReturn<Type>> {
+    this.#assertWritable('create a key')
+
     const kvKeyType = openBaoKvKeyTypeForCreate(options.type)
-    if (kvKeyType) return this.#createKvKey(kvKeyType, options)
+    if (kvKeyType) return this.#createKvKey(agentContext, kvKeyType, options)
 
     const transitType = openBaoKeyTypeForCreate(options.type)
     if (!transitType) {
@@ -261,8 +357,8 @@ export class OpenBaoKeyManagementService implements KeyManagementService {
     }
 
     // Credo stores the key id in DIDs and credential records, so it must be stable.
-    const keyId = options.keyId ?? utils.uuid()
-    const name = this.keyName(keyId)
+    const keyId = openBaoKeyId(options.keyId ?? utils.uuid())
+    const name = this.keyName(agentContext, keyId)
     const key = await this.#client.createKey(name, transitType)
 
     // Transit silently returns an existing key, also if its type differs.
@@ -275,12 +371,15 @@ export class OpenBaoKeyManagementService implements KeyManagementService {
       throw new KeyManagementError(`Could not read the public key of OpenBao key '${name}' after creating it`)
     }
 
-    this.#cachePublicKey(keyId, publicJwk)
+    this.#cachePublicKey(this.#scopeResolver(agentContext), keyId, publicJwk)
     return { keyId, publicJwk } as KmsCreateKeyReturn<Type>
   }
 
-  public async deleteKey(_agentContext: AgentContext, options: KmsDeleteKeyOptions): Promise<boolean> {
-    const name = this.keyName(options.keyId)
+  public async deleteKey(agentContext: AgentContext, options: KmsDeleteKeyOptions): Promise<boolean> {
+    this.#assertWritable('delete a key')
+
+    const scope = this.#scopeResolver(agentContext)
+    const name = this.keyName(agentContext, options.keyId)
     let deleted = false
 
     const transitKey = await this.#getTransitKeyOrNull(name)
@@ -292,23 +391,27 @@ export class OpenBaoKeyManagementService implements KeyManagementService {
     }
 
     // Also remove a KV-backed key, e.g. if the id was reused across key types.
-    if (await this.#deleteKvKey(options.keyId)) deleted = true
+    if (await this.#deleteKvKey(agentContext, options.keyId)) deleted = true
 
-    if (deleted) this.#publicKeyCache.delete(options.keyId)
+    if (deleted) {
+      const cacheKey = cacheKeyFor(scope, options.keyId)
+      this.#publicKeyCache.delete(cacheKey)
+      this.#negativeCache.delete(cacheKey)
+    }
     return deleted
   }
 
-  public async sign(_agentContext: AgentContext, options: KmsSignOptions): Promise<KmsSignReturn> {
+  public async sign(agentContext: AgentContext, options: KmsSignOptions): Promise<KmsSignReturn> {
     const algorithm = SIGN_ALGORITHMS[options.algorithm]
     if (!algorithm) {
       throw new KeyManagementAlgorithmNotSupportedError(`algorithm '${options.algorithm}'`, BACKEND_NAME)
     }
 
     if (algorithm.local) {
-      return { signature: await this.#signLocally(options.keyId, algorithm, options.data) }
+      return { signature: await this.#signLocally(agentContext, options.keyId, algorithm, options.data) }
     }
 
-    const signature = await this.#client.sign(this.keyName(options.keyId), {
+    const signature = await this.#client.sign(this.keyName(agentContext, options.keyId), {
       input: options.data,
       ...(algorithm.transitHash ? { hashAlgorithm: algorithm.transitHash } : {}),
       ...(algorithm.marshaling ? { marshalingAlgorithm: algorithm.marshaling } : {}),
@@ -357,16 +460,18 @@ export class OpenBaoKeyManagementService implements KeyManagementService {
    * secp256k1 signatures are then produced in-process.
    */
   public async importKey<Jwk extends KmsJwkPrivate>(
-    _agentContext: AgentContext,
+    agentContext: AgentContext,
     options: KmsImportKeyOptions<Jwk>,
   ): Promise<KmsImportKeyReturn<Jwk>> {
-    const keyId = options.privateJwk.kid ?? utils.uuid()
-    const name = this.keyName(keyId)
+    this.#assertWritable('import a key')
+
+    const keyId = openBaoKeyId(options.privateJwk.kid ?? utils.uuid())
+    const name = this.keyName(agentContext, keyId)
 
     // Neither store overwrites an existing key. Check both so the caller gets
     // the same typed error as `createKey`.
     if (await this.#getTransitKeyOrNull(name)) throw new KeyManagementKeyExistsError(keyId, BACKEND_NAME)
-    if (await this.#readKvKey(keyId)) throw new KeyManagementKeyExistsError(keyId, BACKEND_NAME)
+    if (await this.#readKvKey(agentContext, keyId)) throw new KeyManagementKeyExistsError(keyId, BACKEND_NAME)
 
     const transitType = openBaoKeyTypeForImport(options.privateJwk)
     if (transitType) {
@@ -397,7 +502,7 @@ export class OpenBaoKeyManagementService implements KeyManagementService {
       }
 
       const publicJwk = publicJwkFromPrivateJwk(options.privateJwk, keyId)
-      await this.#writeKvKey({
+      await this.#writeKvKey(agentContext, {
         version: 1,
         keyId,
         keyType: kvKeyType,
@@ -407,7 +512,7 @@ export class OpenBaoKeyManagementService implements KeyManagementService {
     }
 
     const publicJwk = publicJwkFromPrivateJwk(options.privateJwk, keyId)
-    this.#cachePublicKey(keyId, publicJwk)
+    this.#cachePublicKey(this.#scopeResolver(agentContext), keyId, publicJwk)
     return { keyId, publicJwk } as KmsImportKeyReturn<Jwk>
   }
 
@@ -441,17 +546,18 @@ export class OpenBaoKeyManagementService implements KeyManagementService {
   }
 
   async #createKvKey<Type extends KmsCreateKeyType>(
+    agentContext: AgentContext,
     keyType: KvKeyType,
     options: KmsCreateKeyOptions<Type>,
   ): Promise<KmsCreateKeyReturn<Type>> {
-    const keyId = options.keyId ?? utils.uuid()
+    const keyId = openBaoKeyId(options.keyId ?? utils.uuid())
 
     // Neither store overwrites an existing key, so fail instead of silently
     // returning something that is not the requested key type.
-    if (await this.#getTransitKeyOrNull(this.keyName(keyId))) {
+    if (await this.#getTransitKeyOrNull(this.keyName(agentContext, keyId))) {
       throw new KeyManagementKeyExistsError(keyId, BACKEND_NAME)
     }
-    if (await this.#readKvKey(keyId)) throw new KeyManagementKeyExistsError(keyId, BACKEND_NAME)
+    if (await this.#readKvKey(agentContext, keyId)) throw new KeyManagementKeyExistsError(keyId, BACKEND_NAME)
 
     // secp256k1 is generated with @noble/curves so the same code works on
     // Node.js and on runtimes whose OpenSSL build lacks the curve (e.g. Bun).
@@ -471,7 +577,7 @@ export class OpenBaoKeyManagementService implements KeyManagementService {
       } as KmsJwkPublic
     }
 
-    await this.#writeKvKey({
+    await this.#writeKvKey(agentContext, {
       version: 1,
       keyId,
       keyType,
@@ -479,16 +585,21 @@ export class OpenBaoKeyManagementService implements KeyManagementService {
       publicJwk: publicJwk as unknown as Record<string, unknown>,
     })
 
-    this.#cachePublicKey(keyId, publicJwk)
+    this.#cachePublicKey(this.#scopeResolver(agentContext), keyId, publicJwk)
     return { keyId, publicJwk } as KmsCreateKeyReturn<Type>
   }
 
-  async #signLocally(keyId: string, algorithm: SignAlgorithm, data: Uint8Array): Promise<Uint8Array> {
+  async #signLocally(
+    agentContext: AgentContext,
+    keyId: string,
+    algorithm: SignAlgorithm,
+    data: Uint8Array,
+  ): Promise<Uint8Array> {
     if (algorithm.nodeHash === null) {
       throw new KeyManagementAlgorithmNotSupportedError(`algorithm for '${keyId}'`, BACKEND_NAME)
     }
 
-    const record = await this.#readKvKey(keyId)
+    const record = await this.#readKvKey(agentContext, keyId)
     if (!record) throw new KeyManagementKeyNotFoundError(keyId, [BACKEND_NAME])
     if (record.keyType !== 'secp256k1') {
       throw new KeyManagementAlgorithmNotSupportedError(`signing with a ${record.keyType} key`, BACKEND_NAME)
@@ -511,14 +622,14 @@ export class OpenBaoKeyManagementService implements KeyManagementService {
     }
   }
 
-  #kvPath(keyId: string): string {
-    return `${this.#kvPathPrefix}/${this.keyName(keyId)}`
+  #kvPath(agentContext: AgentContext, keyId: string): string {
+    return `${this.#kvPathPrefix}/${this.keyName(agentContext, keyId)}`
   }
 
-  async #readKvKey(keyId: string): Promise<KvKeyRecord | null> {
+  async #readKvKey(agentContext: AgentContext, keyId: string): Promise<KvKeyRecord | null> {
     if (!this.#kvMount) return null
 
-    const data = await this.#client.getKv(this.#kvMount, this.#kvPath(keyId))
+    const data = await this.#client.getKv(this.#kvMount, this.#kvPath(agentContext, keyId))
     if (!data) return null
 
     if (
@@ -529,35 +640,130 @@ export class OpenBaoKeyManagementService implements KeyManagementService {
       typeof data.publicJwk !== 'object' ||
       data.publicJwk === null
     ) {
-      throw new KeyManagementError(`OpenBao KV entry '${this.#kvPath(keyId)}' does not contain a Credo key record`)
+      throw new KeyManagementError(
+        `OpenBao KV entry '${this.#kvPath(agentContext, keyId)}' does not contain a Credo key record`,
+      )
     }
 
     return data as unknown as KvKeyRecord
   }
 
-  async #writeKvKey(record: KvKeyRecord): Promise<void> {
+  async #writeKvKey(agentContext: AgentContext, record: KvKeyRecord): Promise<void> {
     if (!this.#kvMount) {
       throw new KeyManagementError(
         `A KV v2 mount is required to store ${record.keyType} keys in OpenBao. Set the 'kvMount' option.`,
       )
     }
-    await this.#client.putKv(this.#kvMount, this.#kvPath(record.keyId), record as unknown as Record<string, unknown>)
+    await this.#client.putKv(
+      this.#kvMount,
+      this.#kvPath(agentContext, record.keyId),
+      record as unknown as Record<string, unknown>,
+    )
   }
 
-  async #deleteKvKey(keyId: string): Promise<boolean> {
+  async #deleteKvKey(agentContext: AgentContext, keyId: string): Promise<boolean> {
     if (!this.#kvMount) return false
-    if (!(await this.#readKvKey(keyId))) return false
-    await this.#client.deleteKv(this.#kvMount, this.#kvPath(keyId))
+    if (!(await this.#readKvKey(agentContext, keyId))) return false
+    await this.#client.deleteKv(this.#kvMount, this.#kvPath(agentContext, keyId))
     return true
   }
 
-  #cachePublicKey(keyId: string, publicJwk: KmsJwkPublic): void {
+  #cachePublicKey(scope: string, keyId: string, publicJwk: KmsJwkPublic): void {
+    this.#negativeCache.delete(cacheKeyFor(scope, keyId))
     if (this.#publicKeyCacheTtlMs <= 0) return
-    this.#publicKeyCache.set(keyId, {
+    this.#publicKeyCache.set(cacheKeyFor(scope, keyId), {
       publicJwk,
       expiresAt: Date.now() + this.#publicKeyCacheTtlMs,
     })
   }
+
+  #cacheNotFound(scope: string, keyId: string): void {
+    if (this.#negativeCacheTtlMs <= 0) return
+    this.#negativeCache.set(cacheKeyFor(scope, keyId), Date.now() + this.#negativeCacheTtlMs)
+  }
+
+  #assertWritable(operation: string): void {
+    if (this.#writeEnabled) return
+    throw new KeyManagementError(
+      `Backend '${BACKEND_NAME}' is read-only (writeEnabled is false); cannot ${operation}. ` +
+        'Existing OpenBao keys can still sign and verify.',
+    )
+  }
+
+  /**
+   * Delete every Transit and KV key that belongs to an isolation scope. Used
+   * when a tenant is deleted. The scope string must be exactly what
+   * `scopeFor`/`scopeForCorrelationId` returns.
+   */
+  public async purgeScope(scope: string): Promise<number> {
+    this.#assertWritable('purge keys')
+
+    const prefix = this.#keyName(scope, '')
+    let deleted = 0
+
+    // Collect all names before deleting. Deleting while paging with `after`
+    // can skip entries, because the cursor refers to a name that no longer
+    // exists.
+    const names: string[] = []
+    let after: string | undefined
+    for (;;) {
+      const page = await this.#client.listKeys({
+        ...(after ? { after } : {}),
+        limit: 100,
+      })
+      if (page.length === 0) break
+      names.push(...page)
+      const last = page[page.length - 1]
+      if (page.length < 100 || last === after) break
+      after = last
+    }
+
+    for (const name of names) {
+      if (!name.startsWith(prefix)) continue
+      await this.#client.updateKeyConfig(name, { deletionAllowed: true })
+      await this.#client.deleteKey(name)
+      deleted++
+    }
+
+    if (this.#kvMount) {
+      const kvPrefix = `${this.#kvPathPrefix}/${prefix}`
+      const entries = await this.#client.listKv(this.#kvMount, this.#kvPathPrefix)
+      for (const entry of entries) {
+        if (`${this.#kvPathPrefix}/${entry}`.startsWith(kvPrefix)) {
+          await this.#client.deleteKv(this.#kvMount, `${this.#kvPathPrefix}/${entry}`)
+          deleted++
+        }
+      }
+    }
+
+    const cachePrefix = `${scope}\u0000`
+    for (const key of this.#publicKeyCache.keys()) {
+      if (key.startsWith(cachePrefix)) this.#publicKeyCache.delete(key)
+    }
+    for (const key of this.#negativeCache.keys()) {
+      if (key.startsWith(cachePrefix)) this.#negativeCache.delete(key)
+    }
+
+    return deleted
+  }
+
+  /** Delete every key in the scope of an agent context. */
+  public purgeAgentContext(agentContext: AgentContext): Promise<number> {
+    return this.purgeScope(this.#scopeResolver(agentContext))
+  }
+
+  #keyName(scope: string, keyId: string): string {
+    const scopeHash = createHash('sha256').update(scope, 'utf8').digest('hex').slice(0, 16)
+    const prefix = `${this.#keyNamePrefix}_${scopeHash}_`
+    const encoded = Buffer.from(keyId, 'utf8').toString('base64url')
+    if (prefix.length + encoded.length <= MAX_KEY_NAME_LENGTH) return `${prefix}${encoded}`
+    const digest = createHash('sha256').update(keyId, 'utf8').digest('base64url').slice(0, 32)
+    return `${prefix}${digest}`
+  }
+}
+
+function cacheKeyFor(scope: string, keyId: string): string {
+  return `${scope}\u0000${keyId}`
 }
 
 function describeCreateKeyType(type: KmsCreateKeyType): string {
