@@ -1,0 +1,108 @@
+# Local development stack: OpenBao + a Credo agent on SQLite.
+#
+#   docker compose up -d --build
+#   curl http://localhost:3000/health
+#
+# OpenBao 2.7 removed the file storage backend, so the server uses PebbleDB on
+# the openbao-data volume. The agent uses SQLite on the agent-data volume.
+
+services:
+  openbao:
+    image: openbao/openbao:2.7.2
+    container_name: credo-openbao
+    restart: unless-stopped
+    # The image defaults to `server -dev`. Override it so the entrypoint loads
+    # /openbao/config and uses the persistent PebbleDB backend.
+    command: ['server']
+    ports:
+      - '8200:8200'
+    environment:
+      BAO_ADDR: http://127.0.0.1:8200
+    volumes:
+      - openbao-data:/openbao/file
+      - ./docker/openbao/config.hcl:/openbao/config/config.hcl:ro
+    healthcheck:
+      test: ['CMD', 'bao', 'status']
+      interval: 5s
+      timeout: 3s
+      retries: 12
+      start_period: 5s
+
+  openbao-init:
+    image: openbao/openbao:2.7.2
+    container_name: credo-openbao-init
+    restart: unless-stopped
+    # Root is needed to write the shared token/unseal files into the volume.
+    user: '0:0'
+    entrypoint: ['/bin/sh', '/scripts/init.sh']
+    environment:
+      BAO_ADDR: http://openbao:8200
+    volumes:
+      - ./docker/openbao/init.sh:/scripts/init.sh:ro
+      - openbao-init:/openbao-init
+    depends_on:
+      openbao:
+        condition: service_started
+
+  agent:
+    build:
+      context: .
+      dockerfile: docker/agent/Dockerfile
+    container_name: credo-agent
+    restart: unless-stopped
+    ports:
+      - '3000:3000'
+    environment:
+      OPENBAO_ADDR: http://openbao:8200
+      OPENBAO_TOKEN_FILE: /openbao-init/root-token
+      OPENBAO_KV_MOUNT: secret
+      AGENT_SQLITE_PATH: /app/data/agent.sqlite
+      AGENT_HTTP_HOST: 0.0.0.0
+      AGENT_HTTP_PORT: '3000'
+    volumes:
+      - agent-data:/app/data
+      - openbao-init:/openbao-init:ro
+    depends_on:
+      openbao:
+        condition: service_started
+      openbao-init:
+        condition: service_started
+    healthcheck:
+      test:
+        [
+          'CMD',
+          'node',
+          '-e',
+          "fetch('http://127.0.0.1:3000/health').then((r) => process.exit(r.ok ? 0 : 1)).catch(() => process.exit(1))",
+        ]
+      interval: 5s
+      timeout: 3s
+      retries: 12
+      start_period: 10s
+
+  # Development-only web UI for the KMS backend. Open http://localhost:3001.
+  # nginx serves the static demo and proxies /api/ to the agent, so the browser
+  # only talks to one origin.
+  demo-app:
+    image: nginx:1.27-alpine
+    container_name: credo-demo-app
+    restart: unless-stopped
+    ports:
+      - '3001:80'
+    volumes:
+      - ./demo:/usr/share/nginx/html:ro
+      - ./docker/demo/nginx.conf:/etc/nginx/conf.d/default.conf:ro
+    depends_on:
+      agent:
+        condition: service_healthy
+    healthcheck:
+      test: ['CMD', 'wget', '-qO-', 'http://127.0.0.1/healthz']
+      interval: 5s
+      timeout: 3s
+      retries: 12
+      start_period: 3s
+
+volumes:
+  openbao-data:
+  openbao-init:
+  agent-data:

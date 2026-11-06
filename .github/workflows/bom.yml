@@ -1,0 +1,241 @@
+name: SBOM & CBOM
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - package.json
+      - package-lock.json
+      - src/**
+      - crypto-inventory.json
+      - scripts/generate-cbom.mjs
+      - scripts/finalize-bom.mjs
+      - scripts/validate-bom.mjs
+      - scripts/package-bom.mjs
+      - .github/workflows/bom.yml
+  pull_request:
+    paths:
+      - package.json
+      - package-lock.json
+      - src/**
+      - crypto-inventory.json
+      - scripts/generate-cbom.mjs
+      - scripts/finalize-bom.mjs
+      - scripts/validate-bom.mjs
+      - scripts/package-bom.mjs
+      - .github/workflows/bom.yml
+  schedule:
+    # Every Monday at 03:17 UTC. Rebuilds even without a push so the rolling
+    # release and Dependency-Track project stay current.
+    - cron: '17 3 * * 1'
+  release:
+    types: [published]
+  workflow_dispatch:
+
+concurrency:
+  group: bom-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+permissions:
+  contents: read
+
+jobs:
+  generate:
+    name: Generate and validate
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write # refresh the committed BOMs on main
+    steps:
+      - name: Check out the repository
+        uses: actions/checkout@v4
+        with:
+          # The BOM timestamp is derived from the last commit that changed an
+          # input, which needs history rather than a shallow clone.
+          fetch-depth: 0
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: package-lock.json
+
+      - name: Verify the lock file is usable
+        run: npm ci --ignore-scripts --dry-run --no-audit --no-fund
+
+      - name: Generate SBOM and CBOM
+        run: npm run bom
+
+      - name: Validate against the CycloneDX 1.6 schema
+        run: |
+          schema_dir="$RUNNER_TEMP/cyclonedx"
+          mkdir -p "$schema_dir"
+          base="https://raw.githubusercontent.com/CycloneDX/specification/1.6/schema"
+          curl -fsSL "$base/bom-1.6.schema.json" -o "$schema_dir/bom-1.6.schema.json"
+          curl -fsSL "$base/spdx.schema.json" -o "$schema_dir/spdx.schema.json"
+          curl -fsSL "$base/jsf-0.82.schema.json" -o "$schema_dir/jsf-0.82.schema.json"
+          npm exec --yes --package=ajv-cli@5.0.0 --package=ajv-formats@3.0.1 -- \
+            ajv validate --spec=draft7 --strict=false -c ajv-formats \
+            -r "$schema_dir/spdx.schema.json" \
+            -r "$schema_dir/jsf-0.82.schema.json" \
+            -s "$schema_dir/bom-1.6.schema.json" \
+            -d sbom/sbom.cdx.json \
+            -d sbom/cbom.cdx.json
+
+      - name: Prepare downloadable artifact
+        run: npm run bom:package
+
+      - name: Warn when committed BOMs are stale
+        if: github.event_name == 'pull_request'
+        run: |
+          if [ -n "$(git status --porcelain -- sbom)" ]; then
+            echo "::warning title=Stale SBOM/CBOM::Run 'npm run bom' and commit sbom/ with this pull request."
+            git --no-pager diff --stat -- sbom
+          else
+            echo "Committed SBOM and CBOM are current."
+          fi
+
+      # Keep the repository copies current even when a dependency update was
+      # merged without regenerating them. The BOM timestamp is tied to the last
+      # input change, so an unchanged commit produces no new commit here.
+      - name: Refresh committed BOMs on main
+        if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+        continue-on-error: true
+        run: |
+          if [ -z "$(git status --porcelain -- sbom)" ]; then
+            echo "SBOM and CBOM are already current."
+            exit 0
+          fi
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add sbom
+          git commit -m 'chore(bom): refresh SBOM and CBOM [skip ci]'
+          git push origin HEAD:main
+
+      - name: Add a job summary
+        run: |
+          {
+            echo '### SBOM and CBOM'
+            echo
+            echo '| File | Size | SHA-256 |'
+            echo '| --- | ---: | --- |'
+            while read -r hash file; do
+              size=$(stat -c '%s' "$file")
+              echo "| \`$(basename "$file")\` | ${size} bytes | \`${hash}\` |"
+            done < sbom/SHA256SUMS
+            echo
+            echo "CycloneDX 1.6 SBOM and CBOM for \`${GITHUB_REPOSITORY}@${GITHUB_SHA}\`."
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload SBOM and CBOM
+        uses: actions/upload-artifact@v4
+        with:
+          name: bom
+          path: |
+            sbom/sbom.cdx.json
+            sbom/cbom.cdx.json
+            sbom/crypto-inventory.json
+            sbom/SHA256SUMS
+          if-no-files-found: error
+          retention-days: 90
+
+  attest:
+    name: Attest provenance
+    needs: generate
+    if: github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+      attestations: write
+    steps:
+      - name: Download the generated BOMs
+        uses: actions/download-artifact@v4
+        with:
+          name: bom
+          path: sbom
+
+      - name: Attest the SBOM and CBOM
+        uses: actions/attest-build-provenance@v2
+        with:
+          subject-path: sbom/*.cdx.json
+
+  publish:
+    name: Publish
+    needs: generate
+    if: >-
+      github.event_name == 'release' ||
+      ((github.event_name == 'push' || github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') &&
+      github.ref == 'refs/heads/main')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write # release assets
+      packages: write # optional GHCR publication
+    steps:
+      - name: Download the generated BOMs
+        uses: actions/download-artifact@v4
+        with:
+          name: bom
+          path: sbom
+
+      - name: Attach BOMs to the GitHub release
+        if: github.event_name == 'release'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release upload "${GITHUB_REF_NAME}" sbom/*.json sbom/SHA256SUMS --clobber
+
+      # A single rolling pre-release gives consumers stable download URLs:
+      # https://github.com/<owner>/<repo>/releases/download/bom-latest/sbom.cdx.json
+      - name: Update the rolling bom-latest release
+        if: github.event_name != 'release'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if ! gh release view bom-latest >/dev/null 2>&1; then
+            gh release create bom-latest \
+              --prerelease \
+              --target "$GITHUB_SHA" \
+              --title 'Latest SBOM and CBOM' \
+              --notes 'Rolling CycloneDX SBOM and CBOM for the default branch. Updated by the SBOM & CBOM workflow.'
+          fi
+          gh release upload bom-latest sbom/*.json sbom/SHA256SUMS --clobber
+
+      - name: Install ORAS
+        if: vars.PUBLISH_BOM_OCI == 'true'
+        uses: oras-project/setup-oras@v2
+
+      - name: Publish BOMs to an OCI registry
+        if: vars.PUBLISH_BOM_OCI == 'true'
+        run: |
+          echo "${{ github.token }}" | oras login ghcr.io -u "${{ github.actor }}" --password-stdin
+          repository=$(echo "${GITHUB_REPOSITORY}" | tr '[:upper:]' '[:lower:]')
+          image="ghcr.io/${repository}/bom"
+          tags=("sha-${GITHUB_SHA::12}")
+          if [ "${GITHUB_REF}" = 'refs/heads/main' ]; then tags+=('latest'); fi
+          if [ "${GITHUB_EVENT_NAME}" = 'release' ]; then tags+=("${GITHUB_REF_NAME}"); fi
+          for tag in "${tags[@]}"; do
+            oras push "${image}:${tag}" \
+              --artifact-type application/vnd.cyclonedx \
+              sbom/sbom.cdx.json:application/vnd.cyclonedx+json \
+              sbom/cbom.cdx.json:application/vnd.cyclonedx+json \
+              sbom/crypto-inventory.json:application/json \
+              sbom/SHA256SUMS:text/plain
+          done
+
+      - name: Upload the SBOM to Dependency-Track
+        if: vars.DEPENDENCY_TRACK_URL != ''
+        env:
+          DEPENDENCY_TRACK_URL: ${{ vars.DEPENDENCY_TRACK_URL }}
+          DEPENDENCY_TRACK_API_KEY: ${{ secrets.DEPENDENCY_TRACK_API_KEY }}
+        run: |
+          if [ -z "${DEPENDENCY_TRACK_API_KEY}" ]; then
+            echo '::error::DEPENDENCY_TRACK_API_KEY is required when DEPENDENCY_TRACK_URL is set.'
+            exit 1
+          fi
+          curl --fail-with-body --silent --show-error \
+            -X POST "${DEPENDENCY_TRACK_URL}/api/v1/bom" \
+            -H "X-Api-Key: ${DEPENDENCY_TRACK_API_KEY}" \
+            -F 'autoCreate=true' \
+            -F "projectName=${GITHUB_REPOSITORY#*/}" \
+            -F "projectVersion=${GITHUB_REF_NAME}" \
+            -F 'bom=@sbom/sbom.cdx.json'

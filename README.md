@@ -11,7 +11,12 @@ secp256k1 signatures are produced locally. OpenBao still cannot be the only
 backend: Credo also needs local symmetric crypto and random bytes.
 
 Everything below was verified against OpenBao **2.7.2** and Credo **0.7.4**.
-Run `npm run live-check` to reproduce it (see [Running the check](#running-the-check)).
+Run `npm run live-check` to reproduce it (see [Running the check](#running-the-check)),
+or start the full local stack with `docker compose up -d --build`
+(see [Local development with Docker Compose](#local-development-with-docker-compose)).
+The stack includes a development-only demo web app at
+[http://localhost:3001](http://localhost:3001), including SD-JWT VC and mdoc
+issuance/verification with OpenBao-backed keys.
 
 ---
 
@@ -546,6 +551,133 @@ package's migration CLI) instead of replaying them on every start.
 
 ---
 
+## Local development with Docker Compose
+
+```bash
+docker compose up -d --build
+docker compose logs -f
+```
+
+This starts four containers:
+
+| Service | Port | Storage | Purpose |
+|---|---|---|---|
+| `openbao` | `8200` | PebbleDB on the `openbao-data` volume | The KMS itself, with Transit and KV v2 enabled |
+| `openbao-init` | — | `openbao-init` volume | Initializes, unseals, enables mounts, and re-unseals after restarts |
+| `agent` | `3000` | SQLite on the `agent-data` volume | A Credo agent using OpenBao as its default KMS backend |
+| `demo-app` | `3001` | — | Development-only web UI, served by nginx with `/api/` proxied to the agent |
+
+OpenBao does **not** have a SQLite storage backend. Version 2.7 removed the old
+filesystem backend and supports in-memory, Raft, PostgreSQL and PebbleDB; the
+Compose stack uses PebbleDB, which is the built-in single-node durable backend.
+The Credo agent, its DIDs, credentials and Node fallback keys all live in SQLite.
+
+`openbao-init` is a development convenience. It initializes a non-dev server with
+one unseal share, writes the unseal key and root token to the `openbao-init`
+volume, and polls every few seconds to unseal the server again after a restart.
+The root token is readable by the agent container. Do not use this setup for
+anything but local development.
+
+Check that both sides are up:
+
+```bash
+curl http://localhost:3000/health
+```
+
+### Demo web app (development only)
+
+Open [http://localhost:3001](http://localhost:3001). The `demo-app` service
+serves a static single-page app and proxies `/api/` to the agent, so every call
+stays on one origin.
+
+The UI walks through all Credo KMS features this stack supports:
+
+- **Overview** — OpenBao health, SQLite storage, per-operation backend routing,
+  and the full key-type catalog.
+- **Keys** — generate or import Ed25519, P-256/384/521, RSA-2048/3072/4096,
+  secp256k1, X25519 and AES-256 keys. "Create all key types" exercises every
+  path in one click, and each row shows whether the key is in Transit, KV v2 or
+  the Node.js backend.
+- **Sign & verify** — sign a payload with the selected key and verify the
+  signature through Credo's KMS API.
+- **Random & encrypt** — `randomBytes` and AES-256-GCM encrypt/decrypt, which
+  demonstrate Credo routing those operations to the Node.js backend.
+- **DIDs** — create `did:key`, `did:jwk` and `did:peer` DIDs backed by OpenBao
+  keys, and inspect the DID records persisted in SQLite.
+- **X.509** — generate a CA and leaf key in OpenBao, issue and validate
+  certificates, and sign a credential payload with the leaf key.
+- **Credentials** — issue, store and verify an SD-JWT VC and an ISO 18013-5
+  mdoc (mDL). The SD-JWT VC uses a `did:jwk` issuer and optionally binds the
+  holder key for KB-JWT presentations. The mdoc uses an X.509 CA and leaf
+  certificate whose signing key is the selected OpenBao key. Both records are
+  persisted in SQLite, and the mdoc trust anchor is stored alongside the record
+  so verification survives restarts.
+- **Activity** — the raw HTTP request log, including latency and status.
+
+The key catalog is stored in the browser's `localStorage`; the key material
+stays in OpenBao or SQLite. The demo is intentionally permissive (root token,
+auto-unseal, CORS, insecure HTTP) and must only run on a local development
+machine.
+
+Create and use a key through the agent API:
+
+```bash
+node --input-type=module <<'EOF'
+const base = 'http://localhost:3000'
+const post = (path, body) =>
+  fetch(base + path, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify(body),
+  }).then((res) => res.json())
+
+const key = await post('/keys', { type: { kty: 'OKP', crv: 'Ed25519' } })
+const { signature } = await post('/sign', {
+  keyId: key.keyId,
+  algorithm: 'EdDSA',
+  data: 'hello',
+})
+const { verified } = await post('/verify', {
+  keyId: key.keyId,
+  algorithm: 'EdDSA',
+  data: 'hello',
+  signature,
+})
+
+console.log({ keyId: key.keyId, verified })
+EOF
+```
+
+The API also exposes `POST /keys/import`, `GET|DELETE /keys/:id`,
+`GET /info`, `GET /demo/jwk?type=...`, `POST /random-bytes`,
+`POST /crypto/encrypt`, `POST /crypto/decrypt`, `POST /x509/demo`,
+`POST /sign`, `POST /verify`, and `GET|POST /dids` (`key`, `jwk` or `peer`).
+Credential endpoints are `GET /credentials`,
+`POST /credentials/sd-jwt-vc`, `POST /credentials/sd-jwt-vc/verify`,
+`POST /credentials/sd-jwt-vc/present`, `DELETE /credentials/sd-jwt-vc/:id`,
+`POST /credentials/mdoc`, `POST /credentials/mdoc/verify` and
+`DELETE /credentials/mdoc/:id`. See `scripts/dev-agent.ts` for the exact
+request shapes.
+
+State survives `docker compose restart` / `docker compose stop` and
+`docker compose start`. To throw everything away:
+
+```bash
+docker compose down -v
+```
+
+To run the same agent outside Docker against the Compose OpenBao:
+
+```bash
+export OPENBAO_ADDR=http://127.0.0.1:8200
+export OPENBAO_TOKEN=$(docker compose exec -T agent cat /openbao-init/root-token)
+export OPENBAO_KV_MOUNT=secret
+export AGENT_SQLITE_PATH=./data/agent.sqlite
+npm run dev-agent
+```
+
+---
+
 ## Not implemented (and why)
 
 | Feature | Effort | Note |
@@ -555,6 +687,28 @@ package's migration CLI) instead of replaying them on every start.
 | `randomBytes` | impossible | Synchronous Credo API vs. remote service. |
 | Native Transit secp256k1, X25519 | impossible | Transit has no such key types. The opt-in KV fallback covers them instead. |
 | Symmetric import (`oct`) | low | Not a DID key type and only useful for encrypt/HMAC, which this backend does not implement. |
+
+---
+
+## SBOM and CBOM
+
+The repository ships a CycloneDX 1.6 Software Bill of Materials and a
+Cryptography Bill of Materials:
+
+```bash
+npm run bom
+```
+
+- `sbom/sbom.cdx.json` is generated from `package-lock.json`.
+- `sbom/cbom.cdx.json` inventories every algorithm, protocol and piece of key
+  material, with file and line evidence from `src/`.
+- `crypto-inventory.json` is the reviewed source of truth for the CBOM.
+
+The CI workflow regenerates and validates both documents whenever dependencies,
+source files or the crypto inventory change, publishes them as build artifacts
+and on the rolling `bom-latest` release, and refreshes the committed copies on
+`main`. See [docs/bom.md](docs/bom.md) for the publishing setup, optional
+Dependency-Track/GHCR integration, and how to add a cryptographic asset.
 
 ---
 
@@ -568,6 +722,15 @@ src/secp256k1.ts                     secp256k1 key generation/sign/verify via @n
 src/transitImport.ts                 JWK -> PKCS#8, public JWK derivation, BYOK wrapping
 src/index.ts                         package exports
 scripts/live-check.ts                Drizzle/SQLite agent against a live OpenBao
+scripts/dev-agent.ts                 long-running agent + HTTP API for local development
+scripts/drizzleNodeKeyManagementStorage.ts  persist Node KMS keys as GenericRecords
+demo/                                development-only demo web app (HTML/CSS/JS, no build step)
+docker-compose.yml                   OpenBao + init sidecar + Credo agent + demo app
+docker/openbao/config.hcl            PebbleDB storage and an insecure HTTP listener
+docker/openbao/init.sh               init, unseal, enable mounts, unseal watchdog
+docker/agent/Dockerfile              Node 22 image for the dev agent
+docker/agent/entrypoint.sh           wait for OpenBao, then start the dev agent
+docker/demo/nginx.conf               serve demo/ and proxy /api/ to the agent
 ```
 
 Licensed under Apache-2.0, matching Credo.
