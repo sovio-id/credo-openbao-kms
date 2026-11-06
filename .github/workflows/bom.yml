@@ -47,7 +47,7 @@ jobs:
       contents: write # refresh the committed BOMs on main
     steps:
       - name: Check out the repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           # The BOM timestamp is derived from the last commit that changed an
           # input, which needs history rather than a shallow clone.
