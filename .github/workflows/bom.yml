@@ -200,9 +200,18 @@ jobs:
           fi
           gh release upload bom-latest sbom/*.json sbom/SHA256SUMS --clobber
 
+      # Installed from a pinned release rather than an action: the organisation
+      # allowlist rejects any non-GitHub action, which fails the whole workflow
+      # at startup even though this step is skipped by default.
       - name: Install ORAS
         if: vars.PUBLISH_BOM_OCI == 'true'
-        uses: oras-project/setup-oras@v2
+        run: |
+          version=1.3.6
+          archive="oras_${version}_linux_amd64.tar.gz"
+          curl -fsSL "https://github.com/oras-project/oras/releases/download/v${version}/${archive}" -o "$RUNNER_TEMP/$archive"
+          echo "66fb0ad7206f3f6fa77ed5b552049d364ccf4b50b1684554f731f76302b52ca0  $RUNNER_TEMP/$archive" | sha256sum -c -
+          sudo tar -xzf "$RUNNER_TEMP/$archive" -C /usr/local/bin oras
+          oras version
 
       - name: Publish BOMs to an OCI registry
         if: vars.PUBLISH_BOM_OCI == 'true'
