@@ -1,11 +1,12 @@
 # Contributing to credo-ts-openbao
 
-Thank you for your interest in improving `credo-ts-openbao`. The project is part
-of the LF Decentralized Trust (LFDT) ecosystem and follows the LFDT contribution
-practices.
+Thank you for your interest in improving `credo-ts-openbao`. This is a
+community project maintained by AyanWorks Technology Solutions Pvt. Ltd. and
+open to outside contributions.
 
 By participating in this project you agree to follow the
-[LFDT Code of Conduct](https://lf-decentralized-trust.github.io/governance/governing-documents/code-of-conduct/).
+[Contributor Covenant Code of Conduct, version 2.1](https://www.contributor-covenant.org/version/2/1/code_of_conduct/).
+Report unacceptable behaviour privately to the repository maintainers.
 
 ## Ways to contribute
 
@@ -16,7 +17,7 @@ By participating in this project you agree to follow the
 
 ## Reporting bugs and security issues
 
-Use [GitHub Issues](https://github.com/AyanWorks/credo-ts-openbao/issues) for
+Use [GitHub Issues](https://github.com/sovio-id/credo-ts-openbao/issues) for
 regular bugs and feature requests.
 
 **Do not open a public issue for a security vulnerability.** Follow the
@@ -92,5 +93,6 @@ change is needed and how it was implemented. Reference issues with
 [Apache License, Version 2.0](LICENSE). By submitting a contribution you agree
 that it is licensed under the same terms.
 
-For a longer walkthrough of the fork, branch and pull request workflow, see the
-[LFDT GitHub Contribution Guide](https://lf-decentralized-trust.github.io/governance/guidelines/github-contribution-guide/).
+For a longer walkthrough of the fork, branch and pull request workflow, see
+GitHub's guide to
+[contributing to a project](https://docs.github.com/en/get-started/exploring-projects-on-github/contributing-to-a-project).

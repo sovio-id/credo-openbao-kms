@@ -62,7 +62,7 @@
         "phase": "build"
       }
     ],
-    "timestamp": "2026-11-06T14:07:26.000Z",
+    "timestamp": "2026-11-06T14:11:07.000Z",
     "properties": [
       {
         "name": "bom:generator",
@@ -74,7 +74,7 @@
       },
       {
         "name": "bom:git:commit",
-        "value": "b7510137ea358b8c1564c404dd04aaefec08148a"
+        "value": "8ff8c3521763d7d676c0ec060de176efef209645"
       },
       {
         "name": "bom:git:repository",
@@ -86,7 +86,7 @@
       },
       {
         "name": "bom:crypto-inventory:sha256",
-        "value": "5f451fe45e7e3efe7a0e9f1a23d35d1e8397139e0887b1f0e8b20248ea081343"
+        "value": "6fcc300a00c3cfd7dc2bd983f11601dd64a02e5036940135ceec81f353a6ace1"
       }
     ]
   },
@@ -1401,17 +1401,17 @@
           {
             "location": "README.md",
             "line": 38,
-            "additionalContext": "address: 'https://openbao.internal:8200',"
+            "additionalContext": "address: 'https://openbao.example.com:8200',"
           },
           {
             "location": "README.md",
             "line": 94,
-            "additionalContext": "address: 'https://openbao.internal:8200',"
+            "additionalContext": "address: 'https://openbao.example.com:8200',"
           },
           {
             "location": "README.md",
             "line": 102,
-            "additionalContext": "address: 'https://openbao.internal:8200',"
+            "additionalContext": "address: 'https://openbao.example.com:8200',"
           }
         ]
       }
@@ -2063,5 +2063,5 @@
       "url": "https://github.com/sovio-id/credo-ts-openbao"
     }
   ],
-  "serialNumber": "urn:uuid:1bb2bf55-d64e-5ee1-b3af-9f239601c2e2"
+  "serialNumber": "urn:uuid:8f86fcf3-c1b3-5276-890d-80bd3b3dc2d8"
 }

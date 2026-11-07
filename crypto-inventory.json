@@ -383,7 +383,7 @@
       },
       "providers": ["node-crypto", "openbao"],
       "evidenceFiles": ["README.md"],
-      "detect": ["https://openbao\\.internal"]
+      "detect": ["https://openbao\\.example\\.com"]
     },
     {
       "id": "transit-signing-keys",

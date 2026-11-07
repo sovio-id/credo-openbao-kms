@@ -1,35 +1,9 @@
 name: SBOM & CBOM
 
 on:
-  push:
-    branches: [main]
-    paths:
-      - package.json
-      - package-lock.json
-      - src/**
-      - crypto-inventory.json
-      - scripts/generate-cbom.mjs
-      - scripts/finalize-bom.mjs
-      - scripts/validate-bom.mjs
-      - scripts/package-bom.mjs
-      - .github/workflows/bom.yml
-  pull_request:
-    paths:
-      - package.json
-      - package-lock.json
-      - src/**
-      - crypto-inventory.json
-      - scripts/generate-cbom.mjs
-      - scripts/finalize-bom.mjs
-      - scripts/validate-bom.mjs
-      - scripts/package-bom.mjs
-      - .github/workflows/bom.yml
-  schedule:
-    # Every Monday at 03:17 UTC. Rebuilds even without a push so the rolling
-    # release and Dependency-Track project stay current.
-    - cron: '17 3 * * 1'
-  release:
-    types: [published]
+  # Manual only. The automatic triggers (push to main, pull_request, weekly
+  # schedule, release) were removed before the repository went public; run
+  # `npm run bom` locally, or dispatch this workflow by hand when needed.
   workflow_dispatch:
 
 concurrency:
