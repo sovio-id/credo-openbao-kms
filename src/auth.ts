@@ -28,14 +28,17 @@ import { readFile } from 'node:fs/promises'
 
 import { OpenBaoSealedError, OpenBaoUnreachableError } from './OpenBaoClient.js'
 
+/** Supplies the OpenBao token for each request. */
 export interface AuthProvider {
   /** Return a currently valid token, refreshing it if needed. */
   getToken(): Promise<string>
 }
 
+/** Options for {@link AppRoleAuth}. */
 export interface AppRoleAuthOptions {
   /** OpenBao base address, e.g. `https://openbao.example.com:8200`. */
   address: string
+  /** AppRole role id. */
   roleId: string
   /** Secret id value. Mutually exclusive with `secretIdFile`. */
   secretId?: string
@@ -62,6 +65,21 @@ interface AppRoleLoginResponse {
   errors?: string[]
 }
 
+/**
+ * AppRole authentication. Logs in, tracks the token lease, renews it before
+ * expiry and logs in again when renewal is no longer possible. Concurrent
+ * callers share a single refresh.
+ *
+ * @example
+ * ```ts
+ * const auth = new AppRoleAuth({
+ *   address: 'https://openbao.example.com:8200',
+ *   roleId: process.env.OPENBAO_ROLE_ID!,
+ *   secretIdFile: '/var/run/secrets/openbao/secret-id',
+ * })
+ * const client = new FetchOpenBaoClient({ address, token: () => auth.getToken() })
+ * ```
+ */
 export class AppRoleAuth implements AuthProvider {
   readonly #address: string
   readonly #roleId: string
@@ -78,6 +96,11 @@ export class AppRoleAuth implements AuthProvider {
   #renewable = true
   #refresh: Promise<string> | undefined
 
+  /**
+   * Create an AppRole token provider. No request is made until the first `getToken`.
+   *
+   * @param options Address, role id and secret id (or a file containing it).
+   */
   public constructor(options: AppRoleAuthOptions) {
     this.#address = options.address.replace(/\/+$/, '')
     this.#roleId = options.roleId
@@ -100,6 +123,7 @@ export class AppRoleAuth implements AuthProvider {
     this.#tokenExpiresAt = 0
   }
 
+  /** Return a currently valid token, logging in or renewing first when needed. */
   public async getToken(): Promise<string> {
     if (this.#token && Date.now() < this.#tokenExpiresAt - this.#renewBeforeMs) {
       return this.#token
@@ -113,6 +137,7 @@ export class AppRoleAuth implements AuthProvider {
     return this.#refresh
   }
 
+  /** Log in with the role id and secret id and return the new client token. */
   public async login(): Promise<string> {
     const secretId = await this.#resolveSecretId()
     const body: Record<string, string> = { role_id: this.#roleId }
@@ -122,6 +147,7 @@ export class AppRoleAuth implements AuthProvider {
     return this.#applyToken(response)
   }
 
+  /** Renew the current token, or log in again when it is not renewable. */
   public async renew(): Promise<string> {
     if (!this.#token || !this.#renewable) return this.login()
     try {
@@ -212,10 +238,16 @@ export class AppRoleAuth implements AuthProvider {
 export class StaticTokenAuth implements AuthProvider {
   readonly #token: string
 
+  /**
+   * Create a static token provider.
+   *
+   * @param token The OpenBao token to send with every request.
+   */
   public constructor(token: string) {
     this.#token = token
   }
 
+  /** Return the static token. */
   public async getToken(): Promise<string> {
     return this.#token
   }

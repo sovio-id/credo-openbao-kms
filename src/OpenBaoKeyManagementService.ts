@@ -147,11 +147,12 @@ interface KvKeyRecord {
   publicJwk: Record<string, unknown>
 }
 
+/** Options for {@link OpenBaoKeyManagementService}. */
 export interface OpenBaoKeyManagementServiceOptions {
-  /** A client for the OpenBao Transits engine. */
+  /** A client for the OpenBao Transit engine, normally a {@link FetchOpenBaoClient}. */
   client: OpenBaoClient
   /**
-   * Deployment identifier used to isolate this agent-controller from other
+   * Deployment identifier used to isolate this deployment from other
    * deployments that share the OpenBao cluster. Defaults to no deployment
    * prefix, i.e. the scope is only the context correlation id.
    */
@@ -207,7 +208,8 @@ export interface OpenBaoKeyManagementServiceOptions {
  * symmetric import (see README for why).
  */
 export class OpenBaoKeyManagementService implements KeyManagementService {
-  public readonly backend = BACKEND_NAME
+  /** Backend name used in Credo's `KeyManagementModule` (`defaultBackend`, `backend` option). */
+  public readonly backend: string = BACKEND_NAME
 
   readonly #client: OpenBaoClient
   readonly #deploymentId?: string
@@ -221,6 +223,11 @@ export class OpenBaoKeyManagementService implements KeyManagementService {
   readonly #publicKeyCache = new Map<string, { publicJwk: KmsJwkPublic; expiresAt: number }>()
   readonly #negativeCache = new Map<string, number>()
 
+  /**
+   * Create the backend.
+   *
+   * @param options OpenBao client and backend settings.
+   */
   public constructor(options: OpenBaoKeyManagementServiceOptions) {
     this.#client = options.client
     if (options.deploymentId) this.#deploymentId = options.deploymentId
@@ -240,6 +247,7 @@ export class OpenBaoKeyManagementService implements KeyManagementService {
    * isolation scope, so the same key id in two tenants maps to two keys.
    */
   public keyName(keyId: string): string
+  /** The Transit key name for a Credo key id within an agent context's scope. */
   public keyName(agentContext: AgentContext, keyId: string): string
   public keyName(agentContextOrKeyId: AgentContext | string, maybeKeyId?: string): string {
     const keyId = typeof agentContextOrKeyId === 'string' ? agentContextOrKeyId : maybeKeyId
@@ -258,6 +266,7 @@ export class OpenBaoKeyManagementService implements KeyManagementService {
     return this.#deploymentId ? `${this.#deploymentId}:${correlationId}` : correlationId
   }
 
+  /** Clear the public-key and "not found" caches. */
   public clearPublicKeyCache(): void {
     this.#publicKeyCache.clear()
     this.#negativeCache.clear()
@@ -273,6 +282,11 @@ export class OpenBaoKeyManagementService implements KeyManagementService {
     return this.#client.assertHealthy()
   }
 
+  /**
+   * Whether this backend can perform an operation. Returns `false` for
+   * encrypt/decrypt, randomBytes and symmetric keys, so Credo routes them to
+   * another backend.
+   */
   public isOperationSupported(_agentContext: AgentContext, operation: KmsOperation): boolean {
     switch (operation.operation) {
       case 'createKey':
@@ -304,6 +318,7 @@ export class OpenBaoKeyManagementService implements KeyManagementService {
     }
   }
 
+  /** Public JWK for a key id, or `null` when this backend does not hold the key. */
   public async getPublicKey(agentContext: AgentContext, keyId: string): Promise<KmsJwkPublic | null> {
     const scope = this.#scopeResolver(agentContext)
     const cacheKey = cacheKeyFor(scope, keyId)
@@ -342,6 +357,7 @@ export class OpenBaoKeyManagementService implements KeyManagementService {
     return publicJwk
   }
 
+  /** Create a key in Transit (or KV v2 for secp256k1/X25519). The returned key id starts with `ob_`. */
   public async createKey<Type extends KmsCreateKeyType>(
     agentContext: AgentContext,
     options: KmsCreateKeyOptions<Type>,
@@ -375,6 +391,7 @@ export class OpenBaoKeyManagementService implements KeyManagementService {
     return { keyId, publicJwk } as KmsCreateKeyReturn<Type>
   }
 
+  /** Delete a key. Returns `false` when the key does not exist. */
   public async deleteKey(agentContext: AgentContext, options: KmsDeleteKeyOptions): Promise<boolean> {
     this.#assertWritable('delete a key')
 
@@ -401,6 +418,7 @@ export class OpenBaoKeyManagementService implements KeyManagementService {
     return deleted
   }
 
+  /** Sign data with a key held by this backend. */
   public async sign(agentContext: AgentContext, options: KmsSignOptions): Promise<KmsSignReturn> {
     const algorithm = SIGN_ALGORITHMS[options.algorithm]
     if (!algorithm) {
@@ -422,6 +440,7 @@ export class OpenBaoKeyManagementService implements KeyManagementService {
     return { signature: decodeTransitSignature(signature, algorithm.marshaling === 'jws') }
   }
 
+  /** Verify a signature locally, using only public key material. */
   public async verify(agentContext: AgentContext, options: KmsVerifyOptions): Promise<KmsVerifyReturn> {
     const algorithm = SIGN_ALGORITHMS[options.algorithm]
     if (!algorithm) {
@@ -516,6 +535,7 @@ export class OpenBaoKeyManagementService implements KeyManagementService {
     return { keyId, publicJwk } as KmsImportKeyReturn<Jwk>
   }
 
+  /** Not supported; always throws. Credo routes encryption to another backend. */
   public encrypt(_agentContext: AgentContext, _options: KmsEncryptOptions): Promise<KmsEncryptReturn> {
     return Promise.reject(
       new KeyManagementError(
@@ -525,6 +545,7 @@ export class OpenBaoKeyManagementService implements KeyManagementService {
     )
   }
 
+  /** Not supported; always throws. Credo routes decryption to another backend. */
   public decrypt(_agentContext: AgentContext, _options: KmsDecryptOptions): Promise<KmsDecryptReturn> {
     return Promise.reject(
       new KeyManagementError(
