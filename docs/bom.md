@@ -9,8 +9,8 @@ This repository publishes two CycloneDX 1.6 documents:
 | `sbom/crypto-inventory.json` | The reviewed input that drives the CBOM. Copied into published artifacts. |
 | `sbom/SHA256SUMS` | Checksums for the published files. |
 
-Both documents are committed. CI regenerates and republishes them whenever a
-dependency, source file or the crypto inventory changes.
+Both documents are committed. Regenerate them with `npm run bom` and commit
+`sbom/` together with any dependency, source or crypto inventory change.
 
 ## Generate locally
 
@@ -79,16 +79,9 @@ OpenBao's HMAC or AES-GCM key types in the client type union), add a
 
 ## CI/CD
 
-`.github/workflows/bom.yml` runs on:
-
-- pushes to `main` that touch dependencies, `src/`, the inventory or the BOM
-  scripts;
-- pull requests with the same paths, where the BOM is generated and validated
-  but not published;
-- a weekly schedule (Monday 03:17 UTC), so the rolling release stays current
-  even without a push;
-- published releases;
-- manual dispatch.
+`.github/workflows/bom.yml` runs only when started manually
+(`workflow_dispatch`) from the Actions tab. It has no push, pull request,
+schedule or release triggers.
 
 On every run it:
 
@@ -99,7 +92,6 @@ On every run it:
 5. attests provenance with GitHub Artifact Attestations;
 6. publishes:
    - the rolling `bom-latest` pre-release for the default branch;
-   - assets on the real GitHub release for release events;
    - optionally to GHCR as an OCI artifact;
    - optionally to Dependency-Track.
 
@@ -139,19 +131,17 @@ oras pull ghcr.io/<owner>/<repo>/bom:latest
 
 ### Branch protection
 
-The refresh commit uses `GITHUB_TOKEN`, so it does not trigger another workflow
-run. If `main` is protected against bot pushes, the step is marked
-`continue-on-error`; regeneration, validation, artifact upload and release
-publication still succeed. In that case, merge the `npm run bom` output through
-a normal pull request instead.
+When run on `main`, the refresh commit uses `GITHUB_TOKEN`, so it does not
+trigger another workflow run. If `main` is protected against bot pushes, the
+step is marked `continue-on-error`; regeneration, validation, artifact upload
+and release publication still succeed. In that case, merge the `npm run bom`
+output through a normal pull request instead.
 
 ## Dependency updates
 
-`.github/dependabot.yml` opens weekly npm and GitHub Actions updates. A merged
-dependency change touches `package-lock.json`, which triggers this workflow.
-The workflow regenerates the SBOM and CBOM, publishes the new artifacts, and
-refreshes the committed copies. The pull request check warns when a dependency
-change did not update `sbom/`, so reviewers can request it before merge.
+`.github/dependabot.yml` opens weekly npm and GitHub Actions updates. Because
+the BOM workflow no longer runs automatically, regenerate `sbom/` with
+`npm run bom` (or dispatch the workflow) after merging a dependency update.
 
 ## Scope and caveats
 
