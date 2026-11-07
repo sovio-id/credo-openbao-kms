@@ -15,6 +15,27 @@
  * limitations under the License.
  */
 
+/**
+ * OpenBao Transit key management backend for Credo.
+ *
+ * Register {@link OpenBaoKeyManagementService} with Credo's
+ * `KeyManagementModule`, next to a local backend (Askar or the Node.js KMS)
+ * that handles `randomBytes` and symmetric encryption.
+ *
+ * @example
+ * ```ts
+ * import { AppRoleAuth, FetchOpenBaoClient, OpenBaoKeyManagementService } from '@sovio-id/credo-openbao-kms'
+ *
+ * const auth = new AppRoleAuth({ address, roleId, secretIdFile })
+ * const openBao = new OpenBaoKeyManagementService({
+ *   client: new FetchOpenBaoClient({ address, token: () => auth.getToken() }),
+ * })
+ * await openBao.assertHealthy()
+ * ```
+ *
+ * @module
+ */
+
 export {
   FetchOpenBaoClient,
   OpenBaoNotFoundError,
@@ -29,6 +50,7 @@ export {
   type OpenBaoListKeysOptions,
   type OpenBaoSignOptions,
   type OpenBaoTransitKey,
+  type OpenBaoTransitKeyVersion,
 } from './OpenBaoClient.js'
 
 export {

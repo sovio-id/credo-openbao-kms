@@ -23,17 +23,34 @@
  * tested without network access.
  */
 
+/** The requested Transit key or KV entry does not exist (HTTP 404). */
 export class OpenBaoNotFoundError extends Error {
+  /**
+   * Create the error.
+   *
+   * @param message Description of the missing resource.
+   */
   public constructor(message: string) {
     super(message)
     this.name = 'OpenBaoNotFoundError'
   }
 }
 
+/** OpenBao answered with an error status other than 404. */
 export class OpenBaoRequestError extends Error {
+  /** HTTP status code returned by OpenBao. */
   public readonly status: number
+  /** Error messages from the response body's `errors` array. */
   public readonly errors: string[]
 
+  /**
+   * Create the error from a failed response.
+   *
+   * @param method HTTP method of the failed request.
+   * @param path API path of the failed request, relative to `/v1/`.
+   * @param status HTTP status code returned by OpenBao.
+   * @param errors Error messages from the response body.
+   */
   public constructor(method: string, path: string, status: number, errors: string[]) {
     super(
       `OpenBao request ${method} ${path} failed with status ${status}` +
@@ -51,6 +68,13 @@ export class OpenBaoRequestError extends Error {
  * change. Callers can catch this error separately and alert on it.
  */
 export class OpenBaoSealedError extends OpenBaoRequestError {
+  /**
+   * Create the error for a sealed node (HTTP 503).
+   *
+   * @param method HTTP method of the failed request.
+   * @param path API path of the failed request.
+   * @param errors Error messages from the response body.
+   */
   public constructor(method: string, path: string, errors: string[]) {
     super(method, path, 503, errors.length > 0 ? errors : ['OpenBao is sealed'])
     this.name = 'OpenBaoSealedError'
@@ -59,8 +83,16 @@ export class OpenBaoSealedError extends OpenBaoRequestError {
 
 /** The OpenBao address could not be reached, or the request timed out. */
 export class OpenBaoUnreachableError extends Error {
+  /** The OpenBao base address that could not be reached. */
   public readonly address: string
 
+  /**
+   * Create the error.
+   *
+   * @param address The OpenBao base address.
+   * @param reason Short description of the failure.
+   * @param options Optional underlying cause.
+   */
   public constructor(address: string, reason: string, options?: { cause?: unknown }) {
     super(`OpenBao at ${address} is unreachable: ${reason}`, options)
     this.name = 'OpenBaoUnreachableError'
@@ -68,13 +100,19 @@ export class OpenBaoUnreachableError extends Error {
   }
 }
 
+/** Result of `sys/health`. */
 export interface OpenBaoHealth {
+  /** Whether the node has been initialised. */
   initialized: boolean
+  /** Whether the node is sealed. */
   sealed: boolean
+  /** Whether the node is a standby in an HA cluster. */
   standby: boolean
+  /** OpenBao server version, when reported. */
   version?: string
 }
 
+/** Pagination options for {@link OpenBaoClient.listKeys}. */
 export interface OpenBaoListKeysOptions {
   /** Return keys that sort after this name. Used for pagination. */
   after?: string
@@ -82,18 +120,34 @@ export interface OpenBaoListKeysOptions {
   limit?: number
 }
 
+/** Envelope of an OpenBao API response. */
 export interface OpenBaoResponse<T> {
+  /** Response payload. */
   data: T
+  /** Non-fatal warnings returned by OpenBao. */
   warnings?: string[]
 }
 
+/**
+ * The subset of the OpenBao HTTP API used by {@link OpenBaoKeyManagementService}.
+ * {@link FetchOpenBaoClient} is the default implementation; provide your own
+ * to add retries, metrics or a different transport.
+ */
 export interface OpenBaoClient {
+  /** Read a Transit key, including the public key of every version. */
   getKey(name: string): Promise<OpenBaoTransitKey>
+  /**
+   * Create a Transit key. OpenBao returns the existing key unchanged when the
+   * name is already taken, even if the type differs.
+   */
   createKey(name: string, type: OpenBaoKeyType): Promise<OpenBaoTransitKey>
+  /** Update a Transit key's configuration. Deletion requires `deletionAllowed: true` first. */
   updateKeyConfig(name: string, config: { deletionAllowed: boolean }): Promise<void>
+  /** Delete a Transit key and all of its versions. */
   deleteKey(name: string): Promise<void>
   /** List Transit key names. Supports pagination with `after` and `limit`. */
   listKeys(options?: OpenBaoListKeysOptions): Promise<string[]>
+  /** Sign data with a Transit key. Returns the Transit signature string (`vault:v<n>:<base64>`). */
   sign(name: string, options: OpenBaoSignOptions): Promise<string>
   /** RSA-4096 public key (PEM) used to wrap key material for BYOK import. */
   getWrappingKey(): Promise<string>
@@ -116,7 +170,9 @@ export interface OpenBaoClient {
   assertHealthy(): Promise<void>
 }
 
+/** Options for a Transit BYOK import (`POST /transit/keys/:name/import`). */
 export interface OpenBaoImportKeyOptions {
+  /** Transit key type of the imported key. */
   type: OpenBaoKeyType
   /**
    * `base64(RSA-OAEP(ephemeralAesKey) || AES-KWP(privateKeyPkcs8))`.
@@ -134,6 +190,7 @@ export interface OpenBaoImportKeyOptions {
   allowRotation?: boolean
 }
 
+/** Transit key types. This package creates and imports only the asymmetric ones. */
 export type OpenBaoKeyType =
   | 'aes128-gcm96'
   | 'aes256-gcm96'
@@ -147,24 +204,39 @@ export type OpenBaoKeyType =
   | 'rsa-4096'
   | 'hmac'
 
+/** One version of a Transit key, as returned by `GET /transit/keys/:name`. */
 export interface OpenBaoTransitKeyVersion {
+  /** Key name, for asymmetric keys. */
   name?: string
+  /** Public key: raw base64 for Ed25519, PEM for ECDSA and RSA. */
   public_key?: string
+  /** RFC 3339 creation time of this version. */
   creation_time?: string
+  /** Certificate chain attached to this version, if any. */
   certificate_chain?: string
 }
 
+/** A Transit key as returned by `GET /transit/keys/:name` (fields used by this package). */
 export interface OpenBaoTransitKey {
+  /** Transit key name. */
   name: string
+  /** Transit key type. */
   type: OpenBaoKeyType
+  /** Key versions, keyed by version number. */
   keys: Record<string, OpenBaoTransitKeyVersion>
+  /** Highest key version. */
   latest_version?: number
+  /** Lowest version that may still decrypt. */
   min_decryption_version?: number
+  /** Whether the key type supports signing. */
   supports_signing?: boolean
+  /** Whether the key type supports encryption. */
   supports_encryption?: boolean
+  /** Whether the key type supports decryption. */
   supports_decryption?: boolean
 }
 
+/** Options for a Transit sign request. */
 export interface OpenBaoSignOptions {
   /** Raw data. The client base64-encodes it for the Transit API. */
   input: Uint8Array
@@ -178,6 +250,7 @@ export interface OpenBaoSignOptions {
   saltLength?: string
 }
 
+/** Options for {@link FetchOpenBaoClient}. */
 export interface FetchOpenBaoClientOptions {
   /** Base address, e.g. `https://openbao.example.com:8200`. */
   address: string
@@ -196,6 +269,18 @@ export interface FetchOpenBaoClientOptions {
   fetch?: typeof fetch
 }
 
+/**
+ * {@link OpenBaoClient} implemented with `fetch`. It talks to the Transit
+ * engine at `mountPath` and to KV v2 mounts for the secp256k1/X25519 fallback.
+ *
+ * @example
+ * ```ts
+ * const client = new FetchOpenBaoClient({
+ *   address: 'https://openbao.example.com:8200',
+ *   token: () => auth.getToken(),
+ * })
+ * ```
+ */
 export class FetchOpenBaoClient implements OpenBaoClient {
   readonly #address: string
   readonly #token: string | (() => string | Promise<string>)
@@ -204,6 +289,11 @@ export class FetchOpenBaoClient implements OpenBaoClient {
   readonly #timeoutMs: number
   readonly #fetch: typeof fetch
 
+  /**
+   * Create a client.
+   *
+   * @param options Address, token and optional transport settings.
+   */
   public constructor(options: FetchOpenBaoClientOptions) {
     this.#address = options.address.replace(/\/+$/, '')
     this.#token = options.token
@@ -213,24 +303,29 @@ export class FetchOpenBaoClient implements OpenBaoClient {
     this.#fetch = options.fetch ?? globalThis.fetch
   }
 
+  /** Read a Transit key, including the public key of every version. */
   public async getKey(name: string): Promise<OpenBaoTransitKey> {
     return this.#request<OpenBaoTransitKey>('GET', `keys/${encodeURIComponent(name)}`)
   }
 
+  /** Create a Transit key, or return the existing key with the same name. */
   public async createKey(name: string, type: OpenBaoKeyType): Promise<OpenBaoTransitKey> {
     return this.#request<OpenBaoTransitKey>('POST', `keys/${encodeURIComponent(name)}`, { type })
   }
 
+  /** Update a Transit key's `deletion_allowed` setting. */
   public async updateKeyConfig(name: string, config: { deletionAllowed: boolean }): Promise<void> {
     await this.#request('POST', `keys/${encodeURIComponent(name)}/config`, {
       deletion_allowed: config.deletionAllowed,
     })
   }
 
+  /** Delete a Transit key and all of its versions. */
   public async deleteKey(name: string): Promise<void> {
     await this.#request('DELETE', `keys/${encodeURIComponent(name)}`)
   }
 
+  /** List Transit key names, optionally paginated. */
   public async listKeys(options: OpenBaoListKeysOptions = {}): Promise<string[]> {
     const query = new URLSearchParams()
     if (options.after) query.set('after', options.after)
@@ -241,11 +336,13 @@ export class FetchOpenBaoClient implements OpenBaoClient {
     return data.keys ?? []
   }
 
+  /** RSA-4096 public key (PEM) used to wrap key material for BYOK import. */
   public async getWrappingKey(): Promise<string> {
     const data = await this.#request<{ public_key: string }>('GET', 'wrapping_key')
     return data.public_key
   }
 
+  /** Import externally generated key material (BYOK). */
   public async importKey(name: string, options: OpenBaoImportKeyOptions): Promise<void> {
     const body: Record<string, unknown> = { type: options.type }
     if (options.ciphertext) body.ciphertext = options.ciphertext
@@ -256,6 +353,7 @@ export class FetchOpenBaoClient implements OpenBaoClient {
     await this.#request('POST', `keys/${encodeURIComponent(name)}/import`, body)
   }
 
+  /** Read a JSON object from a KV v2 mount, or `null` when it does not exist. */
   public async getKv(mount: string, path: string): Promise<Record<string, unknown> | null> {
     try {
       const data = await this.#request<{ data: Record<string, unknown> }>('GET', `data/${path}`, undefined, mount)
@@ -266,6 +364,7 @@ export class FetchOpenBaoClient implements OpenBaoClient {
     }
   }
 
+  /** List keys below a path in a KV v2 mount. Returns `[]` when the path does not exist. */
   public async listKv(mount: string, path: string): Promise<string[]> {
     try {
       const data = await this.#request<{ keys: string[] }>('LIST', `metadata/${path}`, undefined, mount)
@@ -276,14 +375,17 @@ export class FetchOpenBaoClient implements OpenBaoClient {
     }
   }
 
+  /** Write a JSON object to a KV v2 mount (creates a new version). */
   public async putKv(mount: string, path: string, data: Record<string, unknown>): Promise<void> {
     await this.#request('POST', `data/${path}`, { data }, mount)
   }
 
+  /** Delete all versions and metadata of a KV v2 entry. */
   public async deleteKv(mount: string, path: string): Promise<void> {
     await this.#request('DELETE', `metadata/${path}`, undefined, mount)
   }
 
+  /** Sign data with a Transit key and return the Transit signature string. */
   public async sign(name: string, options: OpenBaoSignOptions): Promise<string> {
     const hashPath = options.hashAlgorithm ? `/${options.hashAlgorithm}` : ''
     const body: Record<string, unknown> = {
@@ -297,6 +399,10 @@ export class FetchOpenBaoClient implements OpenBaoClient {
     return data.signature
   }
 
+  /**
+   * Read `sys/health`. Throws {@link OpenBaoSealedError} when sealed and
+   * {@link OpenBaoUnreachableError} when the node cannot be reached.
+   */
   public async health(): Promise<OpenBaoHealth> {
     // `standbyok=true` turns a healthy standby into a 200. Sealed (503) and
     // uninitialised (501) still have distinct statuses and bodies.
@@ -345,6 +451,7 @@ export class FetchOpenBaoClient implements OpenBaoClient {
     }
   }
 
+  /** Fail fast at startup when the node is sealed, uninitialised, or unreachable. */
   public async assertHealthy(): Promise<void> {
     await this.health()
   }
