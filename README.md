@@ -31,11 +31,11 @@ import { Agent } from '@credo-ts/core'
 import { KeyManagementModule } from '@credo-ts/core/kms'
 import { NodeInMemoryKeyManagementStorage, NodeKeyManagementService } from '@credo-ts/node'
 
-import { FetchOpenBaoClient, OpenBaoKeyManagementService } from '@credebl/credo-ts-openbao'
+import { FetchOpenBaoClient, OpenBaoKeyManagementService } from '@sovio-id/credo-openbao-kms'
 
 const openBao = new OpenBaoKeyManagementService({
   client: new FetchOpenBaoClient({
-    address: 'https://openbao.internal:8200',
+    address: 'https://openbao.example.com:8200',
     // A function keeps working when the token is renewed by AppRole/Kubernetes auth
     token: async () => getTokenFromAuthMethod(),
   }),
@@ -88,10 +88,10 @@ Concurrent requests share one refresh, so a burst of signatures does not create
 a burst of logins.
 
 ```ts
-import { AppRoleAuth, FetchOpenBaoClient, OpenBaoKeyManagementService } from '@credebl/credo-ts-openbao'
+import { AppRoleAuth, FetchOpenBaoClient, OpenBaoKeyManagementService } from '@sovio-id/credo-openbao-kms'
 
 const auth = new AppRoleAuth({
-  address: 'https://openbao.internal:8200',
+  address: 'https://openbao.example.com:8200',
   roleId: process.env.OPENBAO_ROLE_ID!,
   // Prefer a file injected by the platform over an environment variable.
   secretIdFile: '/var/run/secrets/openbao/secret-id',
@@ -99,7 +99,7 @@ const auth = new AppRoleAuth({
 
 const openBao = new OpenBaoKeyManagementService({
   client: new FetchOpenBaoClient({
-    address: 'https://openbao.internal:8200',
+    address: 'https://openbao.example.com:8200',
     token: () => auth.getToken(),
   }),
   deploymentId: 'wallet-1',
@@ -850,3 +850,9 @@ docker/demo/nginx.conf               serve demo/ and proxy /api/ to the agent
 ```
 
 Licensed under Apache-2.0, matching Credo.
+
+## Disclaimer
+
+This is a community project. It is not affiliated with, endorsed by, or
+sponsored by the Credo maintainers, the OpenWallet Foundation, or the OpenBao
+maintainers. "Credo" and "OpenBao" are used only to describe interoperability.

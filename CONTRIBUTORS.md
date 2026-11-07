@@ -1,6 +1,6 @@
 # Contributors
 
-`credo-ts-openbao` is developed and maintained by
+`credo-openbao-kms` is developed and maintained by
 **AyanWorks Technology Solutions Pvt. Ltd.** together with contributions from
 the open-source community.
 

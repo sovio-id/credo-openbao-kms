@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "description": "Cryptographic assets used by credo-ts-openbao. scripts/generate-cbom.mjs turns this inventory into a CycloneDX 1.6 CBOM and verifies that every 'detect' pattern still exists in the source.",
+  "description": "Cryptographic assets used by credo-openbao-kms. scripts/generate-cbom.mjs turns this inventory into a CycloneDX 1.6 CBOM and verifies that every 'detect' pattern still exists in the source.",
   "providers": {
     "openbao": {
       "type": "application",
@@ -383,7 +383,7 @@
       },
       "providers": ["node-crypto", "openbao"],
       "evidenceFiles": ["README.md"],
-      "detect": ["https://openbao\\.internal"]
+      "detect": ["https://openbao\\.example\\.com"]
     },
     {
       "id": "transit-signing-keys",

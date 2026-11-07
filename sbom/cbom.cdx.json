@@ -5,10 +5,10 @@
   "metadata": {
     "component": {
       "type": "library",
-      "name": "credo-ts-openbao",
-      "group": "@credebl",
+      "name": "credo-openbao-kms",
+      "group": "@sovio-id",
       "version": "0.2.0",
-      "bom-ref": "@credebl/credo-ts-openbao@0.2.0",
+      "bom-ref": "@sovio-id/credo-openbao-kms@0.2.0",
       "description": "OpenBao Transit key management backend for Credo (KMS plug-in)",
       "licenses": [
         {
@@ -18,20 +18,20 @@
           }
         }
       ],
-      "purl": "pkg:npm/%40credebl/credo-ts-openbao@0.2.0?vcs_url=git%2Bhttps%3A%2F%2Fgithub.com%2Fsovio-id%2Fcredo-ts-openbao.git",
+      "purl": "pkg:npm/%40sovio-id/credo-openbao-kms@0.2.0?vcs_url=git%2Bhttps%3A%2F%2Fgithub.com%2Fsovio-id%2Fcredo-openbao-kms.git",
       "externalReferences": [
         {
-          "url": "https://github.com/sovio-id/credo-ts-openbao/issues",
+          "url": "https://github.com/sovio-id/credo-openbao-kms/issues",
           "type": "issue-tracker",
           "comment": "as detected from PackageJson property \"bugs.url\""
         },
         {
-          "url": "git+https://github.com/sovio-id/credo-ts-openbao.git",
+          "url": "git+https://github.com/sovio-id/credo-openbao-kms.git",
           "type": "vcs",
           "comment": "as detected from PackageJson property \"repository.url\""
         },
         {
-          "url": "https://github.com/sovio-id/credo-ts-openbao#readme",
+          "url": "https://github.com/sovio-id/credo-openbao-kms#readme",
           "type": "website",
           "comment": "as detected from PackageJson property \"homepage\""
         }
@@ -47,12 +47,12 @@
       "components": [
         {
           "type": "application",
-          "name": "credo-ts-openbao-cbom-generator",
+          "name": "credo-openbao-kms-cbom-generator",
           "version": "1.0.0"
         },
         {
           "type": "application",
-          "name": "credo-ts-openbao-bom-finalizer",
+          "name": "credo-openbao-kms-bom-finalizer",
           "version": "1.0.0"
         }
       ]
@@ -62,11 +62,11 @@
         "phase": "build"
       }
     ],
-    "timestamp": "2026-11-06T14:07:26.000Z",
+    "timestamp": "2026-11-07T12:01:11.000Z",
     "properties": [
       {
         "name": "bom:generator",
-        "value": "credo-ts-openbao-bom-finalizer"
+        "value": "credo-openbao-kms-bom-finalizer"
       },
       {
         "name": "bom:generator:version",
@@ -74,19 +74,19 @@
       },
       {
         "name": "bom:git:commit",
-        "value": "b7510137ea358b8c1564c404dd04aaefec08148a"
+        "value": "05bd874485a10eba2bbc57788b8b764228624a0b"
       },
       {
         "name": "bom:git:repository",
-        "value": "https://github.com/sovio-id/credo-ts-openbao"
+        "value": "https://github.com/sovio-id/credo-openbao-kms"
       },
       {
         "name": "bom:package-lock:sha256",
-        "value": "23ab2671a5cdc7b32abcd7d4116f522f61d440d75057de69a6d1a1e887894253"
+        "value": "21af8481cd44604388b379ebc6d0b840bdbd38617c484f052bd6b6b802ffc5e3"
       },
       {
         "name": "bom:crypto-inventory:sha256",
-        "value": "5f451fe45e7e3efe7a0e9f1a23d35d1e8397139e0887b1f0e8b20248ea081343"
+        "value": "2676fa9b1c3ba988891e78043ed31f7f921f060750f597973778eaca8ca8e2e8"
       }
     ]
   },
@@ -1401,17 +1401,17 @@
           {
             "location": "README.md",
             "line": 38,
-            "additionalContext": "address: 'https://openbao.internal:8200',"
+            "additionalContext": "address: 'https://openbao.example.com:8200',"
           },
           {
             "location": "README.md",
             "line": 94,
-            "additionalContext": "address: 'https://openbao.internal:8200',"
+            "additionalContext": "address: 'https://openbao.example.com:8200',"
           },
           {
             "location": "README.md",
             "line": 102,
-            "additionalContext": "address: 'https://openbao.internal:8200',"
+            "additionalContext": "address: 'https://openbao.example.com:8200',"
           }
         ]
       }
@@ -1830,7 +1830,7 @@
     },
     {
       "type": "library",
-      "bom-ref": "@credebl/credo-ts-openbao@0.2.0|@noble/curves@2.4.0",
+      "bom-ref": "@sovio-id/credo-openbao-kms@0.2.0|@noble/curves@2.4.0",
       "name": "curves",
       "version": "2.4.0",
       "description": "Pure-JavaScript secp256k1 implementation used for key generation, signing and verification when the runtime's OpenSSL build does not support the curve.",
@@ -1861,7 +1861,7 @@
   ],
   "dependencies": [
     {
-      "ref": "@credebl/credo-ts-openbao@0.2.0",
+      "ref": "@sovio-id/credo-openbao-kms@0.2.0",
       "dependsOn": [
         "crypto/algorithm/ed25519",
         "crypto/algorithm/ecdsa-p256",
@@ -1888,7 +1888,7 @@
         "crypto/related-crypto-material/ephemeral-aes-kek",
         "provider/openbao",
         "provider/node-crypto",
-        "@credebl/credo-ts-openbao@0.2.0|@noble/curves@2.4.0"
+        "@sovio-id/credo-openbao-kms@0.2.0|@noble/curves@2.4.0"
       ]
     },
     {
@@ -1922,7 +1922,7 @@
     {
       "ref": "crypto/algorithm/secp256k1",
       "dependsOn": [
-        "@credebl/credo-ts-openbao@0.2.0|@noble/curves@2.4.0"
+        "@sovio-id/credo-openbao-kms@0.2.0|@noble/curves@2.4.0"
       ]
     },
     {
@@ -2005,7 +2005,7 @@
       "ref": "crypto/algorithm/csprng",
       "dependsOn": [
         "provider/node-crypto",
-        "@credebl/credo-ts-openbao@0.2.0|@noble/curves@2.4.0"
+        "@sovio-id/credo-openbao-kms@0.2.0|@noble/curves@2.4.0"
       ]
     },
     {
@@ -2031,7 +2031,7 @@
       "ref": "crypto/related-crypto-material/kv-secp256k1-key",
       "dependsOn": [
         "provider/openbao",
-        "@credebl/credo-ts-openbao@0.2.0|@noble/curves@2.4.0"
+        "@sovio-id/credo-openbao-kms@0.2.0|@noble/curves@2.4.0"
       ]
     },
     {
@@ -2054,14 +2054,14 @@
       "ref": "provider/node-crypto"
     },
     {
-      "ref": "@credebl/credo-ts-openbao@0.2.0|@noble/curves@2.4.0"
+      "ref": "@sovio-id/credo-openbao-kms@0.2.0|@noble/curves@2.4.0"
     }
   ],
   "externalReferences": [
     {
       "type": "vcs",
-      "url": "https://github.com/sovio-id/credo-ts-openbao"
+      "url": "https://github.com/sovio-id/credo-openbao-kms"
     }
   ],
-  "serialNumber": "urn:uuid:1bb2bf55-d64e-5ee1-b3af-9f239601c2e2"
+  "serialNumber": "urn:uuid:9f1454ae-fb18-52d4-ac1d-63f031a82313"
 }

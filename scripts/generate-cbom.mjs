@@ -512,7 +512,7 @@ function main() {
         components: [
           {
             type: 'application',
-            name: 'credo-ts-openbao-cbom-generator',
+            name: 'credo-openbao-kms-cbom-generator',
             version: '1.0.0',
           },
         ],

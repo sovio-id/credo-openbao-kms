@@ -733,7 +733,7 @@ async function main(): Promise<void> {
 
       if (request.method === 'GET' && path === '/info') {
         sendJson(response, 200, {
-          service: 'credo-ts-openbao dev agent',
+          service: 'credo-openbao-kms dev agent',
           environment: 'development',
           devOnly: true,
           warning:

@@ -1,5 +1,5 @@
 {
-  "name": "@credebl/credo-ts-openbao",
+  "name": "@sovio-id/credo-openbao-kms",
   "version": "0.2.0",
   "description": "OpenBao Transit key management backend for Credo (KMS plug-in)",
   "type": "module",
@@ -7,13 +7,13 @@
   "codeowners": [
     "AyanWorks"
   ],
-  "homepage": "https://github.com/sovio-id/credo-ts-openbao#readme",
+  "homepage": "https://github.com/sovio-id/credo-openbao-kms#readme",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/sovio-id/credo-ts-openbao.git"
+    "url": "git+https://github.com/sovio-id/credo-openbao-kms.git"
   },
   "bugs": {
-    "url": "https://github.com/sovio-id/credo-ts-openbao/issues"
+    "url": "https://github.com/sovio-id/credo-openbao-kms/issues"
   },
   "publishConfig": {
     "access": "public"

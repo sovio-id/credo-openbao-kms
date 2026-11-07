@@ -32,7 +32,7 @@ const INPUT_PATHS = [
   'scripts/package-bom.mjs',
   '.github/workflows/bom.yml',
 ]
-const GENERATOR = 'credo-ts-openbao-bom-finalizer'
+const GENERATOR = 'credo-openbao-kms-bom-finalizer'
 const GENERATOR_VERSION = '1.0.0'
 
 function fail(message) {

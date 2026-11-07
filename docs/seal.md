@@ -93,7 +93,7 @@ is present.
 ```hcl
 # No seal stanza: Shamir is the default.
 storage "postgresql" {
-  connection_url = "postgres://openbao:...@postgres:5432/credebl_openbao?sslmode=require&search_path=openbao"
+  connection_url = "postgres://openbao:...@postgres:5432/openbao?sslmode=require&search_path=openbao"
 }
 ```
 
@@ -196,25 +196,25 @@ needs encrypt/decrypt permission on that one key.
 
 ```hcl
 seal "transit" {
-  address         = "https://openbao-unseal.internal:8200"
+  address         = "https://openbao-unseal.example.com:8200"
   token           = "env://BAO_SEAL_TOKEN"
-  key_name        = "credebl-openbao-seal"
+  key_name        = "openbao-seal"
   mount_path      = "transit/"
   disable_renewal = "false"
 
   tls_ca_cert     = "/etc/openbao/tls/ca.pem"
-  tls_server_name = "openbao-unseal.internal"
+  tls_server_name = "openbao-unseal.example.com"
 }
 ```
 
 The token needs only:
 
 ```hcl
-path "transit/encrypt/credebl-openbao-seal" {
+path "transit/encrypt/openbao-seal" {
   capabilities = ["update"]
 }
 
-path "transit/decrypt/credebl-openbao-seal" {
+path "transit/decrypt/openbao-seal" {
   capabilities = ["update"]
 }
 ```
@@ -257,7 +257,7 @@ seal "pkcs11" {
   lib         = "/usr/lib64/pkcs11/libvendor.so"
   token_label = "OpenBao"
   pin         = "env://BAO_HSM_PIN"
-  key_label   = "credebl-openbao-root"
+  key_label   = "openbao-root"
   mechanism   = "AES_GCM"
 }
 ```
@@ -267,7 +267,7 @@ Create the key with the HSM vendor tooling, for example:
 ```bash
 pkcs11-tool --module /usr/lib64/pkcs11/libvendor.so \
   --token-label OpenBao --pin "$BAO_HSM_PIN" \
-  --keygen --key-type aes:32 --label credebl-openbao-root
+  --keygen --key-type aes:32 --label openbao-root
 ```
 
 **Use it when**
@@ -304,8 +304,8 @@ exist before OpenBao initialisation and must be in the `active` state.
 
 ```hcl
 seal "kmip" {
-  endpoint    = "kmip.internal:5696"
-  kms_key_id  = "c1afd090-e8ae-4d03-a81f-3938b7e2be02"
+  endpoint    = "kmip.example.com:5696"
+  kms_key_id  = "00000000-0000-0000-0000-000000000000"
   client_cert = "/etc/openbao/kmip/client.pem"
   client_key  = "/etc/openbao/kmip/client.key"
   ca_cert     = "/etc/openbao/kmip/ca.pem"
@@ -363,7 +363,7 @@ plugin "kms" "gcpckms" {
 }
 
 seal "gcpckms" {
-  project    = "credebl-prod"
+  project    = "example-project"
   region     = "europe-west1"
   key_ring   = "openbao"
   crypto_key = "seal"
@@ -382,7 +382,7 @@ plugin "kms" "azurekeyvault" {
 
 seal "azurekeyvault" {
   tenant_id     = "00000000-0000-0000-0000-000000000000"
-  vault_name    = "credebl-openbao"
+  vault_name    = "openbao"
   key_name      = "seal"
   # Prefer a managed identity over client_secret.
   # client_id     = "00000000-0000-0000-0000-000000000000"
@@ -411,7 +411,7 @@ seal "ocikms" {
 # AliCloud
 seal "alicloudkms" {
   region     = "eu-central-1"
-  kms_key_id = "alias/credebl-openbao-seal"
+  kms_key_id = "alias/openbao-seal"
 }
 
 # OVHcloud
@@ -561,7 +561,7 @@ application keys.
 Restore procedure:
 
 ```bash
-# 1. Provision PostgreSQL and restore the credebl_openbao database.
+# 1. Provision PostgreSQL and restore the openbao database.
 # 2. Start OpenBao with the same seal configuration and the same trust anchor.
 # 3. Verify the node unseals and the Transit keys are listed.
 bao status
@@ -614,13 +614,13 @@ application flag is bypassed.
 ## 12. PostgreSQL storage notes
 
 The CREDEBL deployment uses PostgreSQL as OpenBao's storage backend, in a
-dedicated `credebl_openbao` database and the `openbao` schema. The schema is
+dedicated `openbao` database and the `openbao` schema. The schema is
 selected through the connection `search_path`; the PostgreSQL storage stanza has
 no separate `schema` parameter.
 
 ```hcl
 storage "postgresql" {
-  connection_url = "postgres://openbao:...@postgres:5432/credebl_openbao?sslmode=require&search_path=openbao"
+  connection_url = "postgres://openbao:...@postgres:5432/openbao?sslmode=require&search_path=openbao"
   max_idle_connections = 5
   max_parallel       = 10
 }
@@ -628,8 +628,8 @@ storage "postgresql" {
 
 ```sql
 CREATE ROLE openbao LOGIN PASSWORD '...';
-CREATE DATABASE credebl_openbao OWNER openbao;
-\c credebl_openbao
+CREATE DATABASE openbao OWNER openbao;
+\c openbao
 CREATE SCHEMA IF NOT EXISTS openbao AUTHORIZATION openbao;
 ALTER ROLE openbao SET search_path TO openbao, public;
 ```
