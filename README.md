@@ -31,7 +31,7 @@ import { Agent } from '@credo-ts/core'
 import { KeyManagementModule } from '@credo-ts/core/kms'
 import { NodeInMemoryKeyManagementStorage, NodeKeyManagementService } from '@credo-ts/node'
 
-import { FetchOpenBaoClient, OpenBaoKeyManagementService } from '@credebl/credo-ts-openbao'
+import { FetchOpenBaoClient, OpenBaoKeyManagementService } from '@sovio-id/credo-openbao-kms'
 
 const openBao = new OpenBaoKeyManagementService({
   client: new FetchOpenBaoClient({
@@ -88,7 +88,7 @@ Concurrent requests share one refresh, so a burst of signatures does not create
 a burst of logins.
 
 ```ts
-import { AppRoleAuth, FetchOpenBaoClient, OpenBaoKeyManagementService } from '@credebl/credo-ts-openbao'
+import { AppRoleAuth, FetchOpenBaoClient, OpenBaoKeyManagementService } from '@sovio-id/credo-openbao-kms'
 
 const auth = new AppRoleAuth({
   address: 'https://openbao.example.com:8200',

@@ -1,6 +1,6 @@
-# Contributing to credo-ts-openbao
+# Contributing to credo-openbao-kms
 
-Thank you for your interest in improving `credo-ts-openbao`. This is a
+Thank you for your interest in improving `credo-openbao-kms`. This is a
 community project maintained by AyanWorks Technology Solutions Pvt. Ltd. and
 open to outside contributions.
 
@@ -17,7 +17,7 @@ Report unacceptable behaviour privately to the repository maintainers.
 
 ## Reporting bugs and security issues
 
-Use [GitHub Issues](https://github.com/sovio-id/credo-ts-openbao/issues) for
+Use [GitHub Issues](https://github.com/sovio-id/credo-openbao-kms/issues) for
 regular bugs and feature requests.
 
 **Do not open a public issue for a security vulnerability.** Follow the
@@ -89,7 +89,7 @@ change is needed and how it was implemented. Reference issues with
 
 ## License
 
-`credo-ts-openbao` is licensed under the
+`credo-openbao-kms` is licensed under the
 [Apache License, Version 2.0](LICENSE). By submitting a contribution you agree
 that it is licensed under the same terms.
 
