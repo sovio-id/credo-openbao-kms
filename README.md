@@ -1,4 +1,4 @@
-# @sovio-id/credo-ts-openbao
+# @sovio-id/credo-openbao-kms
 
 An [OpenBao](https://openbao.org) Transit backend for Credo's key management
 service (KMS), plus the feasibility findings behind it.
