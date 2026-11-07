@@ -16,5 +16,21 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
+      # JSR versions are immutable. Skip instead of failing when this version
+      # was already published (0.2.0 was published to JSR by hand).
+      - name: Check whether this version is already on JSR
+        id: jsr
+        run: |
+          version=$(node -p "require('./jsr.json').version")
+          status=$(curl -s -o /dev/null -w '%{http_code}' \
+            "https://api.jsr.io/scopes/sovio-id/packages/credo-openbao-kms/versions/${version}")
+          if [ "$status" = 200 ]; then
+            echo "::notice title=JSR publish skipped::@sovio-id/credo-openbao-kms@${version} already exists on JSR"
+            echo "exists=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "exists=false" >> "$GITHUB_OUTPUT"
+          fi
       - uses: oven-sh/setup-bun@v2
+        if: steps.jsr.outputs.exists != 'true'
       - run: npx jsr publish
+        if: steps.jsr.outputs.exists != 'true'
