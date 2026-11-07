@@ -1,7 +1,7 @@
 # OpenBao seal and unseal options
 
 This document covers every seal mechanism OpenBao 2.7 supports, how to choose
-one for a CREDEBL deployment, and the operational rules that keep an
+one for a deployment, and the operational rules that keep an
 OpenBao-backed KMS recoverable.
 
 It is written for operators. The key point for application teams is simple:
@@ -333,7 +333,7 @@ being in a degraded state leaves the node sealed.
 ## 8. Cloud KMS seals
 
 The cloud seals use a customer-managed key in the provider's KMS. They are the
-default recommendation for CREDEBL SaaS deployments.
+default recommendation for managed cloud deployments.
 
 ### AWS KMS
 
@@ -453,7 +453,7 @@ creating the key in the Primus HSM.
 
 ---
 
-## 9. Choosing a seal for CREDEBL
+## 9. Choosing a seal
 
 The choice is driven by where the deployment runs and whether restarts are
 unattended.
@@ -461,13 +461,13 @@ unattended.
 | Deployment | Recommended seal | Why |
 | --- | --- | --- |
 | Local development / demo | Shamir 1-of-1, or `static` for convenience | Fast, disposable, no external dependency |
-| Small self-hosted, supervised restarts | Shamir 5-of-3 | No extra infrastructure, strong break-glass story |
+| Small self-hosted, supervised restarts | Shamir 3-of-5 | No extra infrastructure, strong break-glass story |
 | Self-hosted, unattended restarts, no HSM | `transit` from a dedicated unseal cluster | Auto-unseal without storing shards in Kubernetes |
 | Self-hosted with an approved HSM | `pkcs11` (or `kmip`) | Key material stays in the HSM |
 | Existing enterprise secret manager | `static` with `env://` or `file://` | Chains OpenBao to the existing trust anchor |
-| CREDEBL SaaS on AWS | `awskms` | Managed availability, IAM, CloudTrail |
-| CREDEBL SaaS on Azure | `azurekeyvault` | Managed availability, managed identity, audit |
-| CREDEBL SaaS on GCP | `gcpckms` | Managed availability, Workload Identity, audit |
+| Managed deployment on AWS | `awskms` | Managed availability, IAM, CloudTrail |
+| Managed deployment on Azure | `azurekeyvault` | Managed availability, managed identity, audit |
+| Managed deployment on GCP | `gcpckms` | Managed availability, Workload Identity, audit |
 | Existing KMIP appliance | `kmip` | Reuses the standard key manager |
 
 Rules of thumb:
@@ -512,7 +512,7 @@ recover from a lost approle/token, not for routine restarts.
 bao operator init -key-shares=5 -key-threshold=3
 # Distribute the unseal keys to five holders.
 # Store the initial root token separately, then revoke it after creating
-# a break-glass admin and the AppRole used by agent-controller.
+# a break-glass admin and the AppRole used by the Credo agent.
 ```
 
 ### Migrating Shamir to auto-unseal
@@ -567,7 +567,7 @@ Restore procedure:
 bao status
 bao list transit/keys
 # 4. Verify a known DID resolves and a test signature verifies.
-# 5. Only then point agent-controller at the restored cluster.
+# 5. Only then point the Credo agent at the restored cluster.
 ```
 
 ---
@@ -588,7 +588,7 @@ The seal protects storage. Credo keys are different.
   deployment and tenant scope, and the AppRole policy should not allow listing
   other scopes.
 
-The AppRole policy should deny these paths for the agent-controller role:
+The AppRole policy should deny these paths for the Credo agent's role:
 
 ```hcl
 path "transit/keys/*/rotate" {
@@ -605,15 +605,15 @@ path "transit/backup/*" {
 ```
 
 Key creation, import, and deletion are separate capabilities. If
-`OPENBAO_WRITE_ENABLED=false`, the deployment should also use a read/sign-only
-AppRole so a compromised agent cannot create or delete keys even if the
-application flag is bypassed.
+`writeEnabled: false` is set on the backend, the deployment should also use a
+read/sign-only AppRole so a compromised agent cannot create or delete keys even
+if the application flag is bypassed.
 
 ---
 
 ## 12. PostgreSQL storage notes
 
-The CREDEBL deployment uses PostgreSQL as OpenBao's storage backend, in a
+When PostgreSQL is OpenBao's storage backend, use a
 dedicated `openbao` database and the `openbao` schema. The schema is
 selected through the connection `search_path`; the PostgreSQL storage stanza has
 no separate `schema` parameter.
@@ -658,7 +658,7 @@ Before going live:
 - [ ] Restore tested end to end, including `bao list transit/keys`.
 - [ ] Seal migration procedure tested in staging.
 - [ ] AppRole policy denies key rotation, export, and backup.
-- [ ] `OPENBAO_WRITE_ENABLED` documented for rollback.
+- [ ] The `writeEnabled: false` rollback procedure is documented.
 - [ ] Alerts on `Sealed true`, seal health-check failures, and KMS/HSM errors.
 - [ ] No Transit signing key rotation in any runbook.
 

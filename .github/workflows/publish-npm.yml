@@ -1,8 +1,9 @@
 name: Publish to npm
 
 # Runs only when a GitHub release is published. Requires the NPM_TOKEN secret
-# (a granular npm token with publish rights on the @sovio-id scope) in the
-# NPM_TOKEN Actions environment, which a maintainer manages by hand.
+# (a granular npm token with publish rights on the @sovio-id scope, allowed to
+# bypass 2FA) in the Production Actions environment. With staged publishing
+# enabled on npm, a maintainer approves each version on npmjs.com.
 on:
   release:
     types: [published]
