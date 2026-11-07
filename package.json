@@ -1,6 +1,6 @@
 {
   "name": "@sovio-id/credo-openbao-kms",
-  "version": "0.2.1",
+  "version": "0.2.2",
   "description": "OpenBao Transit key management backend for Credo (KMS plug-in)",
   "type": "module",
   "license": "Apache-2.0",

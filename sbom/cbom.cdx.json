@@ -7,8 +7,8 @@
       "type": "library",
       "name": "credo-openbao-kms",
       "group": "@sovio-id",
-      "version": "0.2.1",
-      "bom-ref": "@sovio-id/credo-openbao-kms@0.2.1",
+      "version": "0.2.2",
+      "bom-ref": "@sovio-id/credo-openbao-kms@0.2.2",
       "description": "OpenBao Transit key management backend for Credo (KMS plug-in)",
       "licenses": [
         {
@@ -18,7 +18,7 @@
           }
         }
       ],
-      "purl": "pkg:npm/%40sovio-id/credo-openbao-kms@0.2.1?vcs_url=git%2Bhttps%3A%2F%2Fgithub.com%2Fsovio-id%2Fcredo-openbao-kms.git",
+      "purl": "pkg:npm/%40sovio-id/credo-openbao-kms@0.2.2?vcs_url=git%2Bhttps%3A%2F%2Fgithub.com%2Fsovio-id%2Fcredo-openbao-kms.git",
       "externalReferences": [
         {
           "url": "https://github.com/sovio-id/credo-openbao-kms/issues",
@@ -62,7 +62,7 @@
         "phase": "build"
       }
     ],
-    "timestamp": "2026-11-07T12:20:12.000Z",
+    "timestamp": "2026-11-07T15:22:44.000Z",
     "properties": [
       {
         "name": "bom:generator",
@@ -74,7 +74,7 @@
       },
       {
         "name": "bom:git:commit",
-        "value": "ba3c788ddf4cd69507cf0157231fe5afe5575c06"
+        "value": "87ee99b3ce4704fd991fd4e99ead355d0ae10cc9"
       },
       {
         "name": "bom:git:repository",
@@ -82,7 +82,7 @@
       },
       {
         "name": "bom:package-lock:sha256",
-        "value": "b7fe14f407955a0b365f60d118e7b5535776294f0145d78fce92e57b9bfe43cb"
+        "value": "352694b48007eea8bf5dbc77aa312fd8961ecb0a5de10e87b8e72092cd62fea1"
       },
       {
         "name": "bom:crypto-inventory:sha256",
@@ -120,12 +120,17 @@
         "occurrences": [
           {
             "location": "src/OpenBaoClient.ts",
-            "line": 141,
+            "line": 198,
             "additionalContext": "| 'ed25519'"
           },
           {
             "location": "src/OpenBaoClient.ts",
-            "line": 171,
+            "line": 211,
+            "additionalContext": "/** Public key: raw base64 for Ed25519, PEM for ECDSA and RSA. */"
+          },
+          {
+            "location": "src/OpenBaoClient.ts",
+            "line": 243,
             "additionalContext": "/** Transit hash algorithm, e.g. `sha2-256`. Omitted for Ed25519. */"
           },
           {
@@ -135,42 +140,42 @@
           },
           {
             "location": "src/OpenBaoKeyManagementService.ts",
-            "line": 202,
+            "line": 203,
             "additionalContext": "* Ed25519, P-256, P-384, P-521 and RSA keys are created, imported and signed"
           },
           {
             "location": "src/OpenBaoKeyManagementService.ts",
-            "line": 458,
+            "line": 477,
             "additionalContext": "* Ed25519, P-256/384/521 and RSA keys use Transit's BYOK endpoint and never"
           },
           {
             "location": "src/OpenBaoKeyManagementService.ts",
-            "line": 792,
+            "line": 813,
             "additionalContext": "return type.crv === 'Ed25519' ? 'ed25519' : undefined"
           },
           {
             "location": "src/OpenBaoKeyManagementService.ts",
-            "line": 827,
+            "line": 848,
             "additionalContext": "return jwk.crv === 'Ed25519' ? 'ed25519' : undefined"
           },
           {
             "location": "src/OpenBaoKeyManagementService.ts",
-            "line": 876,
+            "line": 897,
             "additionalContext": "if (key.type === 'ed25519') {"
           },
           {
             "location": "src/OpenBaoKeyManagementService.ts",
-            "line": 877,
+            "line": 898,
             "additionalContext": "// Transit returns Ed25519 public keys as base64 of the raw 32 bytes."
           },
           {
             "location": "src/OpenBaoKeyManagementService.ts",
-            "line": 880,
+            "line": 901,
             "additionalContext": "crv: 'Ed25519',"
           },
           {
             "location": "src/OpenBaoKeyManagementService.ts",
-            "line": 939,
+            "line": 960,
             "additionalContext": "// Ed25519: no separate hash."
           }
         ]
@@ -205,7 +210,7 @@
         "occurrences": [
           {
             "location": "src/OpenBaoClient.ts",
-            "line": 142,
+            "line": 199,
             "additionalContext": "| 'ecdsa-p256'"
           },
           {
@@ -215,32 +220,32 @@
           },
           {
             "location": "src/OpenBaoKeyManagementService.ts",
-            "line": 202,
+            "line": 203,
             "additionalContext": "* Ed25519, P-256, P-384, P-521 and RSA keys are created, imported and signed"
           },
           {
             "location": "src/OpenBaoKeyManagementService.ts",
-            "line": 458,
+            "line": 477,
             "additionalContext": "* Ed25519, P-256/384/521 and RSA keys use Transit's BYOK endpoint and never"
           },
           {
             "location": "src/OpenBaoKeyManagementService.ts",
-            "line": 778,
+            "line": 799,
             "additionalContext": "case 'P-256':"
           },
           {
             "location": "src/OpenBaoKeyManagementService.ts",
-            "line": 779,
+            "line": 800,
             "additionalContext": "return 'ecdsa-p256'"
           },
           {
             "location": "src/OpenBaoKeyManagementService.ts",
-            "line": 813,
+            "line": 834,
             "additionalContext": "case 'P-256':"
           },
           {
             "location": "src/OpenBaoKeyManagementService.ts",
-            "line": 814,
+            "line": 835,
             "additionalContext": "return 'ecdsa-p256'"
           }
         ]
@@ -275,7 +280,7 @@
         "occurrences": [
           {
             "location": "src/OpenBaoClient.ts",
-            "line": 143,
+            "line": 200,
             "additionalContext": "| 'ecdsa-p384'"
           },
           {
@@ -285,27 +290,27 @@
           },
           {
             "location": "src/OpenBaoKeyManagementService.ts",
-            "line": 202,
+            "line": 203,
             "additionalContext": "* Ed25519, P-256, P-384, P-521 and RSA keys are created, imported and signed"
           },
           {
             "location": "src/OpenBaoKeyManagementService.ts",
-            "line": 780,
+            "line": 801,
             "additionalContext": "case 'P-384':"
           },
           {
             "location": "src/OpenBaoKeyManagementService.ts",
-            "line": 781,
+            "line": 802,
             "additionalContext": "return 'ecdsa-p384'"
           },
           {
             "location": "src/OpenBaoKeyManagementService.ts",
-            "line": 815,
+            "line": 836,
             "additionalContext": "case 'P-384':"
           },
           {
             "location": "src/OpenBaoKeyManagementService.ts",
-            "line": 816,
+            "line": 837,
             "additionalContext": "return 'ecdsa-p384'"
           }
         ]
@@ -340,7 +345,7 @@
         "occurrences": [
           {
             "location": "src/OpenBaoClient.ts",
-            "line": 144,
+            "line": 201,
             "additionalContext": "| 'ecdsa-p521'"
           },
           {
@@ -350,27 +355,27 @@
           },
           {
             "location": "src/OpenBaoKeyManagementService.ts",
-            "line": 202,
+            "line": 203,
             "additionalContext": "* Ed25519, P-256, P-384, P-521 and RSA keys are created, imported and signed"
           },
           {
             "location": "src/OpenBaoKeyManagementService.ts",
-            "line": 782,
+            "line": 803,
             "additionalContext": "case 'P-521':"
           },
           {
             "location": "src/OpenBaoKeyManagementService.ts",
-            "line": 783,
+            "line": 804,
             "additionalContext": "return 'ecdsa-p521'"
           },
           {
             "location": "src/OpenBaoKeyManagementService.ts",
-            "line": 817,
+            "line": 838,
             "additionalContext": "case 'P-521':"
           },
           {
             "location": "src/OpenBaoKeyManagementService.ts",
-            "line": 818,
+            "line": 839,
             "additionalContext": "return 'ecdsa-p521'"
           }
         ]
@@ -405,8 +410,13 @@
         "occurrences": [
           {
             "location": "src/OpenBaoClient.ts",
-            "line": 104,
+            "line": 158,
             "additionalContext": "* not exist. Used for key types Transit cannot represent (secp256k1, X25519)."
+          },
+          {
+            "location": "src/OpenBaoClient.ts",
+            "line": 274,
+            "additionalContext": "* engine at `mountPath` and to KV v2 mounts for the secp256k1/X25519 fallback."
           },
           {
             "location": "src/OpenBaoKeyManagementService.ts",
@@ -430,87 +440,92 @@
           },
           {
             "location": "src/OpenBaoKeyManagementService.ts",
-            "line": 189,
+            "line": 190,
             "additionalContext": "* KV v2 mount used for key types Transit cannot represent (secp256k1 and"
           },
           {
             "location": "src/OpenBaoKeyManagementService.ts",
-            "line": 203,
+            "line": 204,
             "additionalContext": "* inside the Transit secrets engine. secp256k1 and X25519 — which Transit"
           },
           {
             "location": "src/OpenBaoKeyManagementService.ts",
-            "line": 204,
+            "line": 205,
             "additionalContext": "* cannot represent — can be stored in a KV v2 mount (`kvMount`); secp256k1 is"
           },
           {
             "location": "src/OpenBaoKeyManagementService.ts",
-            "line": 322,
+            "line": 337,
             "additionalContext": "// Not in Transit. secp256k1/X25519 keys may live in the KV fallback."
           },
           {
             "location": "src/OpenBaoKeyManagementService.ts",
-            "line": 459,
+            "line": 360,
+            "additionalContext": "/** Create a key in Transit (or KV v2 for secp256k1/X25519). The returned key id starts with `ob_`. */"
+          },
+          {
+            "location": "src/OpenBaoKeyManagementService.ts",
+            "line": 478,
             "additionalContext": "* travel in plaintext. secp256k1 and X25519 use the configured KV v2 mount;"
           },
           {
             "location": "src/OpenBaoKeyManagementService.ts",
-            "line": 460,
+            "line": 479,
             "additionalContext": "* secp256k1 signatures are then produced in-process."
           },
           {
             "location": "src/OpenBaoKeyManagementService.ts",
-            "line": 562,
+            "line": 583,
             "additionalContext": "// secp256k1 is generated with @noble/curves so the same code works on"
           },
           {
             "location": "src/OpenBaoKeyManagementService.ts",
-            "line": 567,
+            "line": 588,
             "additionalContext": "if (keyType === 'secp256k1') {"
           },
           {
             "location": "src/OpenBaoKeyManagementService.ts",
-            "line": 604,
+            "line": 625,
             "additionalContext": "if (record.keyType !== 'secp256k1') {"
           },
           {
             "location": "src/OpenBaoKeyManagementService.ts",
-            "line": 637,
+            "line": 658,
             "additionalContext": "(data.keyType !== 'secp256k1' && data.keyType !== 'x25519') ||"
           },
           {
             "location": "src/OpenBaoKeyManagementService.ts",
-            "line": 784,
+            "line": 805,
             "additionalContext": "// Transit has no secp256k1 key type; stored in KV when configured."
           },
           {
             "location": "src/OpenBaoKeyManagementService.ts",
-            "line": 785,
+            "line": 806,
             "additionalContext": "case 'secp256k1':"
           },
           {
             "location": "src/OpenBaoKeyManagementService.ts",
-            "line": 819,
+            "line": 840,
             "additionalContext": "// Transit cannot import secp256k1 key material."
           },
           {
             "location": "src/OpenBaoKeyManagementService.ts",
-            "line": 859,
+            "line": 880,
             "additionalContext": "if (type.kty === 'EC' && type.crv === 'secp256k1') return 'secp256k1'"
           },
           {
             "location": "src/OpenBaoKeyManagementService.ts",
-            "line": 865,
+            "line": 886,
             "additionalContext": "if (jwk.kty === 'EC' && jwk.crv === 'secp256k1') return 'secp256k1'"
           },
           {
             "location": "src/OpenBaoKeyManagementService.ts",
-            "line": 929,
+            "line": 950,
             "additionalContext": "// node:crypto cannot handle secp256k1 on every runtime, so verification of"
           },
           {
             "location": "src/OpenBaoKeyManagementService.ts",
-            "line": 931,
+            "line": 952,
             "additionalContext": "if (jwk.kty === 'EC' && jwk.crv === 'secp256k1') {"
           },
           {
@@ -608,8 +623,13 @@
         "occurrences": [
           {
             "location": "src/OpenBaoClient.ts",
-            "line": 104,
+            "line": 158,
             "additionalContext": "* not exist. Used for key types Transit cannot represent (secp256k1, X25519)."
+          },
+          {
+            "location": "src/OpenBaoClient.ts",
+            "line": 274,
+            "additionalContext": "* engine at `mountPath` and to KV v2 mounts for the secp256k1/X25519 fallback."
           },
           {
             "location": "src/OpenBaoKeyManagementService.ts",
@@ -618,57 +638,62 @@
           },
           {
             "location": "src/OpenBaoKeyManagementService.ts",
-            "line": 190,
+            "line": 191,
             "additionalContext": "* X25519). Leave unset to route those key types to another backend such as"
           },
           {
             "location": "src/OpenBaoKeyManagementService.ts",
-            "line": 203,
+            "line": 204,
             "additionalContext": "* inside the Transit secrets engine. secp256k1 and X25519 — which Transit"
           },
           {
             "location": "src/OpenBaoKeyManagementService.ts",
-            "line": 322,
+            "line": 337,
             "additionalContext": "// Not in Transit. secp256k1/X25519 keys may live in the KV fallback."
           },
           {
             "location": "src/OpenBaoKeyManagementService.ts",
-            "line": 459,
+            "line": 360,
+            "additionalContext": "/** Create a key in Transit (or KV v2 for secp256k1/X25519). The returned key id starts with `ob_`. */"
+          },
+          {
+            "location": "src/OpenBaoKeyManagementService.ts",
+            "line": 478,
             "additionalContext": "* travel in plaintext. secp256k1 and X25519 use the configured KV v2 mount;"
           },
           {
             "location": "src/OpenBaoKeyManagementService.ts",
-            "line": 564,
+            "line": 585,
             "additionalContext": "// X25519 uses node:crypto, which supports it everywhere we target."
           },
           {
             "location": "src/OpenBaoKeyManagementService.ts",
-            "line": 572,
+            "line": 593,
             "additionalContext": "const { privateKey, publicKey } = generateKeyPairSync('x25519')"
           },
           {
             "location": "src/OpenBaoKeyManagementService.ts",
-            "line": 637,
+            "line": 658,
             "additionalContext": "(data.keyType !== 'secp256k1' && data.keyType !== 'x25519') ||"
           },
           {
             "location": "src/OpenBaoKeyManagementService.ts",
-            "line": 791,
+            "line": 812,
             "additionalContext": "// Transit has no X25519 key type; stored in KV when configured."
           },
           {
             "location": "src/OpenBaoKeyManagementService.ts",
-            "line": 826,
+            "line": 847,
             "additionalContext": "// X25519 is not a signing key and Transit has no such key type."
           },
           {
             "location": "src/OpenBaoKeyManagementService.ts",
-            "line": 860,
+            "line": 881,
             "additionalContext": "if (type.kty === 'OKP' && type.crv === 'X25519') return 'x25519'"
           },
           {
             "location": "src/OpenBaoKeyManagementService.ts",
-            "line": 866,
+            "line": 887,
             "additionalContext": "if (jwk.kty === 'OKP' && jwk.crv === 'X25519') return 'x25519'"
           }
         ]
@@ -703,12 +728,12 @@
         "occurrences": [
           {
             "location": "src/OpenBaoClient.ts",
-            "line": 145,
+            "line": 202,
             "additionalContext": "| 'rsa-2048'"
           },
           {
             "location": "src/OpenBaoKeyManagementService.ts",
-            "line": 839,
+            "line": 860,
             "additionalContext": "return 'rsa-2048'"
           },
           {
@@ -748,12 +773,12 @@
         "occurrences": [
           {
             "location": "src/OpenBaoClient.ts",
-            "line": 146,
+            "line": 203,
             "additionalContext": "| 'rsa-3072'"
           },
           {
             "location": "src/OpenBaoKeyManagementService.ts",
-            "line": 841,
+            "line": 862,
             "additionalContext": "return 'rsa-3072'"
           }
         ]
@@ -788,17 +813,22 @@
         "occurrences": [
           {
             "location": "src/OpenBaoClient.ts",
-            "line": 98,
+            "line": 152,
             "additionalContext": "/** RSA-4096 public key (PEM) used to wrap key material for BYOK import. */"
           },
           {
             "location": "src/OpenBaoClient.ts",
-            "line": 147,
+            "line": 204,
             "additionalContext": "| 'rsa-4096'"
           },
           {
+            "location": "src/OpenBaoClient.ts",
+            "line": 339,
+            "additionalContext": "/** RSA-4096 public key (PEM) used to wrap key material for BYOK import. */"
+          },
+          {
             "location": "src/OpenBaoKeyManagementService.ts",
-            "line": 843,
+            "line": 864,
             "additionalContext": "return 'rsa-4096'"
           },
           {
@@ -843,12 +873,12 @@
         "occurrences": [
           {
             "location": "src/OpenBaoClient.ts",
-            "line": 176,
+            "line": 248,
             "additionalContext": "signatureAlgorithm?: 'pss' | 'pkcs1v15'"
           },
           {
             "location": "src/OpenBaoClient.ts",
-            "line": 294,
+            "line": 396,
             "additionalContext": "if (options.saltLength) body.salt_length = options.saltLength"
           },
           {
@@ -878,7 +908,7 @@
           },
           {
             "location": "src/OpenBaoKeyManagementService.ts",
-            "line": 943,
+            "line": 964,
             "additionalContext": "if (algorithm.signatureAlgorithm === 'pss') {"
           }
         ]
@@ -912,12 +942,12 @@
         "occurrences": [
           {
             "location": "src/OpenBaoClient.ts",
-            "line": 122,
+            "line": 178,
             "additionalContext": "* `base64(RSA-OAEP(ephemeralAesKey) || AES-KWP(privateKeyPkcs8))`."
           },
           {
             "location": "src/OpenBaoClient.ts",
-            "line": 128,
+            "line": 184,
             "additionalContext": "/** Hash used for RSA-OAEP. Defaults to `SHA256`, matching the wrapper here. */"
           },
           {
@@ -1057,7 +1087,7 @@
           },
           {
             "location": "src/OpenBaoClient.ts",
-            "line": 122,
+            "line": 178,
             "additionalContext": "* `base64(RSA-OAEP(ephemeralAesKey) || AES-KWP(privateKeyPkcs8))`."
           },
           {
@@ -1168,17 +1198,17 @@
         "occurrences": [
           {
             "location": "src/OpenBaoClient.ts",
-            "line": 128,
+            "line": 184,
             "additionalContext": "/** Hash used for RSA-OAEP. Defaults to `SHA256`, matching the wrapper here. */"
           },
           {
             "location": "src/OpenBaoClient.ts",
-            "line": 129,
+            "line": 185,
             "additionalContext": "hashFunction?: 'SHA1' | 'SHA224' | 'SHA256' | 'SHA384' | 'SHA512'"
           },
           {
             "location": "src/OpenBaoClient.ts",
-            "line": 171,
+            "line": 243,
             "additionalContext": "/** Transit hash algorithm, e.g. `sha2-256`. Omitted for Ed25519. */"
           },
           {
@@ -1203,22 +1233,22 @@
           },
           {
             "location": "src/OpenBaoKeyManagementService.ts",
-            "line": 486,
+            "line": 505,
             "additionalContext": "hashFunction: 'SHA256',"
           },
           {
             "location": "src/OpenBaoKeyManagementService.ts",
-            "line": 610,
+            "line": 631,
             "additionalContext": "if (algorithm.nodeHash !== 'sha256') {"
           },
           {
             "location": "src/OpenBaoKeyManagementService.ts",
-            "line": 756,
+            "line": 777,
             "additionalContext": "const scopeHash = createHash('sha256').update(scope, 'utf8').digest('hex').slice(0, 16)"
           },
           {
             "location": "src/OpenBaoKeyManagementService.ts",
-            "line": 760,
+            "line": 781,
             "additionalContext": "const digest = createHash('sha256').update(keyId, 'utf8').digest('base64url').slice(0, 32)"
           },
           {
@@ -1255,7 +1285,7 @@
         "occurrences": [
           {
             "location": "src/OpenBaoClient.ts",
-            "line": 129,
+            "line": 185,
             "additionalContext": "hashFunction?: 'SHA1' | 'SHA224' | 'SHA256' | 'SHA384' | 'SHA512'"
           },
           {
@@ -1302,7 +1332,7 @@
         "occurrences": [
           {
             "location": "src/OpenBaoClient.ts",
-            "line": 129,
+            "line": 185,
             "additionalContext": "hashFunction?: 'SHA1' | 'SHA224' | 'SHA256' | 'SHA384' | 'SHA512'"
           },
           {
@@ -1347,23 +1377,33 @@
       "evidence": {
         "occurrences": [
           {
+            "location": "src/index.ts",
+            "line": 23,
+            "additionalContext": "* that handles `randomBytes` and symmetric encryption."
+          },
+          {
             "location": "src/OpenBaoKeyManagementService.ts",
-            "line": 206,
+            "line": 207,
             "additionalContext": "* its key store. Unsupported on purpose: encrypt/decrypt, randomBytes and"
           },
           {
             "location": "src/OpenBaoKeyManagementService.ts",
-            "line": 302,
+            "line": 287,
+            "additionalContext": "* encrypt/decrypt, randomBytes and symmetric keys, so Credo routes them to"
+          },
+          {
+            "location": "src/OpenBaoKeyManagementService.ts",
+            "line": 316,
             "additionalContext": "case 'randomBytes':"
           },
           {
             "location": "src/OpenBaoKeyManagementService.ts",
-            "line": 538,
+            "line": 559,
             "additionalContext": "* Not supported: OpenBao is remote and Credo's `randomBytes` is synchronous."
           },
           {
             "location": "src/OpenBaoKeyManagementService.ts",
-            "line": 541,
+            "line": 562,
             "additionalContext": "public randomBytes(_agentContext: AgentContext, _options: KmsRandomBytesOptions): KmsRandomBytesReturn {"
           },
           {
@@ -1440,7 +1480,12 @@
         "occurrences": [
           {
             "location": "src/OpenBaoClient.ts",
-            "line": 226,
+            "line": 316,
+            "additionalContext": "/** Update a Transit key's `deletion_allowed` setting. */"
+          },
+          {
+            "location": "src/OpenBaoClient.ts",
+            "line": 319,
             "additionalContext": "deletion_allowed: config.deletionAllowed,"
           }
         ]
@@ -1464,22 +1509,22 @@
         "occurrences": [
           {
             "location": "src/OpenBaoClient.ts",
-            "line": 99,
+            "line": 153,
             "additionalContext": "getWrappingKey(): Promise<string>"
           },
           {
             "location": "src/OpenBaoClient.ts",
-            "line": 244,
+            "line": 340,
             "additionalContext": "public async getWrappingKey(): Promise<string> {"
           },
           {
             "location": "src/OpenBaoClient.ts",
-            "line": 245,
+            "line": 341,
             "additionalContext": "const data = await this.#request<{ public_key: string }>('GET', 'wrapping_key')"
           },
           {
             "location": "src/OpenBaoKeyManagementService.ts",
-            "line": 479,
+            "line": 498,
             "additionalContext": "const wrappingKey = await this.#client.getWrappingKey()"
           }
         ]
@@ -1506,8 +1551,13 @@
         "occurrences": [
           {
             "location": "src/OpenBaoClient.ts",
-            "line": 104,
+            "line": 158,
             "additionalContext": "* not exist. Used for key types Transit cannot represent (secp256k1, X25519)."
+          },
+          {
+            "location": "src/OpenBaoClient.ts",
+            "line": 274,
+            "additionalContext": "* engine at `mountPath` and to KV v2 mounts for the secp256k1/X25519 fallback."
           },
           {
             "location": "src/OpenBaoKeyManagementService.ts",
@@ -1526,97 +1576,102 @@
           },
           {
             "location": "src/OpenBaoKeyManagementService.ts",
-            "line": 189,
+            "line": 190,
             "additionalContext": "* KV v2 mount used for key types Transit cannot represent (secp256k1 and"
           },
           {
             "location": "src/OpenBaoKeyManagementService.ts",
-            "line": 195,
+            "line": 196,
             "additionalContext": "/** Path prefix inside `kvMount`. Defaults to `credo-keys`. */"
           },
           {
             "location": "src/OpenBaoKeyManagementService.ts",
-            "line": 203,
+            "line": 204,
             "additionalContext": "* inside the Transit secrets engine. secp256k1 and X25519 — which Transit"
           },
           {
             "location": "src/OpenBaoKeyManagementService.ts",
-            "line": 204,
+            "line": 205,
             "additionalContext": "* cannot represent — can be stored in a KV v2 mount (`kvMount`); secp256k1 is"
           },
           {
             "location": "src/OpenBaoKeyManagementService.ts",
-            "line": 235,
+            "line": 242,
             "additionalContext": "this.#kvPathPrefix = (options.kvPathPrefix ?? 'credo-keys').replace(/^\\/+|\\/+$/g, '')"
           },
           {
             "location": "src/OpenBaoKeyManagementService.ts",
-            "line": 322,
+            "line": 337,
             "additionalContext": "// Not in Transit. secp256k1/X25519 keys may live in the KV fallback."
           },
           {
             "location": "src/OpenBaoKeyManagementService.ts",
-            "line": 459,
+            "line": 360,
+            "additionalContext": "/** Create a key in Transit (or KV v2 for secp256k1/X25519). The returned key id starts with `ob_`. */"
+          },
+          {
+            "location": "src/OpenBaoKeyManagementService.ts",
+            "line": 478,
             "additionalContext": "* travel in plaintext. secp256k1 and X25519 use the configured KV v2 mount;"
           },
           {
             "location": "src/OpenBaoKeyManagementService.ts",
-            "line": 460,
+            "line": 479,
             "additionalContext": "* secp256k1 signatures are then produced in-process."
           },
           {
             "location": "src/OpenBaoKeyManagementService.ts",
-            "line": 562,
+            "line": 583,
             "additionalContext": "// secp256k1 is generated with @noble/curves so the same code works on"
           },
           {
             "location": "src/OpenBaoKeyManagementService.ts",
-            "line": 567,
+            "line": 588,
             "additionalContext": "if (keyType === 'secp256k1') {"
           },
           {
             "location": "src/OpenBaoKeyManagementService.ts",
-            "line": 604,
+            "line": 625,
             "additionalContext": "if (record.keyType !== 'secp256k1') {"
           },
           {
             "location": "src/OpenBaoKeyManagementService.ts",
-            "line": 637,
+            "line": 658,
             "additionalContext": "(data.keyType !== 'secp256k1' && data.keyType !== 'x25519') ||"
           },
           {
             "location": "src/OpenBaoKeyManagementService.ts",
-            "line": 784,
+            "line": 805,
             "additionalContext": "// Transit has no secp256k1 key type; stored in KV when configured."
           },
           {
             "location": "src/OpenBaoKeyManagementService.ts",
-            "line": 785,
+            "line": 806,
             "additionalContext": "case 'secp256k1':"
           },
           {
             "location": "src/OpenBaoKeyManagementService.ts",
-            "line": 819,
+            "line": 840,
             "additionalContext": "// Transit cannot import secp256k1 key material."
           },
           {
             "location": "src/OpenBaoKeyManagementService.ts",
-            "line": 859,
+            "line": 880,
             "additionalContext": "if (type.kty === 'EC' && type.crv === 'secp256k1') return 'secp256k1'"
           },
           {
             "location": "src/OpenBaoKeyManagementService.ts",
-            "line": 865,
+            "line": 886,
             "additionalContext": "if (jwk.kty === 'EC' && jwk.crv === 'secp256k1') return 'secp256k1'"
           },
           {
             "location": "src/OpenBaoKeyManagementService.ts",
-            "line": 929,
+            "line": 950,
             "additionalContext": "// node:crypto cannot handle secp256k1 on every runtime, so verification of"
           },
           {
             "location": "src/OpenBaoKeyManagementService.ts",
-            "line": 931,
+            "line": 952,
             "additionalContext": "if (jwk.kty === 'EC' && jwk.crv === 'secp256k1') {"
           },
           {
@@ -1703,8 +1758,13 @@
         "occurrences": [
           {
             "location": "src/OpenBaoClient.ts",
-            "line": 104,
+            "line": 158,
             "additionalContext": "* not exist. Used for key types Transit cannot represent (secp256k1, X25519)."
+          },
+          {
+            "location": "src/OpenBaoClient.ts",
+            "line": 274,
+            "additionalContext": "* engine at `mountPath` and to KV v2 mounts for the secp256k1/X25519 fallback."
           },
           {
             "location": "src/OpenBaoKeyManagementService.ts",
@@ -1713,67 +1773,72 @@
           },
           {
             "location": "src/OpenBaoKeyManagementService.ts",
-            "line": 190,
+            "line": 191,
             "additionalContext": "* X25519). Leave unset to route those key types to another backend such as"
           },
           {
             "location": "src/OpenBaoKeyManagementService.ts",
-            "line": 195,
+            "line": 196,
             "additionalContext": "/** Path prefix inside `kvMount`. Defaults to `credo-keys`. */"
           },
           {
             "location": "src/OpenBaoKeyManagementService.ts",
-            "line": 203,
+            "line": 204,
             "additionalContext": "* inside the Transit secrets engine. secp256k1 and X25519 — which Transit"
           },
           {
             "location": "src/OpenBaoKeyManagementService.ts",
-            "line": 235,
+            "line": 242,
             "additionalContext": "this.#kvPathPrefix = (options.kvPathPrefix ?? 'credo-keys').replace(/^\\/+|\\/+$/g, '')"
           },
           {
             "location": "src/OpenBaoKeyManagementService.ts",
-            "line": 322,
+            "line": 337,
             "additionalContext": "// Not in Transit. secp256k1/X25519 keys may live in the KV fallback."
           },
           {
             "location": "src/OpenBaoKeyManagementService.ts",
-            "line": 459,
+            "line": 360,
+            "additionalContext": "/** Create a key in Transit (or KV v2 for secp256k1/X25519). The returned key id starts with `ob_`. */"
+          },
+          {
+            "location": "src/OpenBaoKeyManagementService.ts",
+            "line": 478,
             "additionalContext": "* travel in plaintext. secp256k1 and X25519 use the configured KV v2 mount;"
           },
           {
             "location": "src/OpenBaoKeyManagementService.ts",
-            "line": 564,
+            "line": 585,
             "additionalContext": "// X25519 uses node:crypto, which supports it everywhere we target."
           },
           {
             "location": "src/OpenBaoKeyManagementService.ts",
-            "line": 572,
+            "line": 593,
             "additionalContext": "const { privateKey, publicKey } = generateKeyPairSync('x25519')"
           },
           {
             "location": "src/OpenBaoKeyManagementService.ts",
-            "line": 637,
+            "line": 658,
             "additionalContext": "(data.keyType !== 'secp256k1' && data.keyType !== 'x25519') ||"
           },
           {
             "location": "src/OpenBaoKeyManagementService.ts",
-            "line": 791,
+            "line": 812,
             "additionalContext": "// Transit has no X25519 key type; stored in KV when configured."
           },
           {
             "location": "src/OpenBaoKeyManagementService.ts",
-            "line": 826,
+            "line": 847,
             "additionalContext": "// X25519 is not a signing key and Transit has no such key type."
           },
           {
             "location": "src/OpenBaoKeyManagementService.ts",
-            "line": 860,
+            "line": 881,
             "additionalContext": "if (type.kty === 'OKP' && type.crv === 'X25519') return 'x25519'"
           },
           {
             "location": "src/OpenBaoKeyManagementService.ts",
-            "line": 866,
+            "line": 887,
             "additionalContext": "if (jwk.kty === 'OKP' && jwk.crv === 'X25519') return 'x25519'"
           }
         ]
@@ -1835,7 +1900,7 @@
     },
     {
       "type": "library",
-      "bom-ref": "@sovio-id/credo-openbao-kms@0.2.1|@noble/curves@2.4.0",
+      "bom-ref": "@sovio-id/credo-openbao-kms@0.2.2|@noble/curves@2.4.0",
       "name": "curves",
       "version": "2.4.0",
       "description": "Pure-JavaScript secp256k1 implementation used for key generation, signing and verification when the runtime's OpenSSL build does not support the curve.",
@@ -1866,7 +1931,7 @@
   ],
   "dependencies": [
     {
-      "ref": "@sovio-id/credo-openbao-kms@0.2.1",
+      "ref": "@sovio-id/credo-openbao-kms@0.2.2",
       "dependsOn": [
         "crypto/algorithm/ed25519",
         "crypto/algorithm/ecdsa-p256",
@@ -1893,7 +1958,7 @@
         "crypto/related-crypto-material/ephemeral-aes-kek",
         "provider/openbao",
         "provider/node-crypto",
-        "@sovio-id/credo-openbao-kms@0.2.1|@noble/curves@2.4.0"
+        "@sovio-id/credo-openbao-kms@0.2.2|@noble/curves@2.4.0"
       ]
     },
     {
@@ -1927,7 +1992,7 @@
     {
       "ref": "crypto/algorithm/secp256k1",
       "dependsOn": [
-        "@sovio-id/credo-openbao-kms@0.2.1|@noble/curves@2.4.0"
+        "@sovio-id/credo-openbao-kms@0.2.2|@noble/curves@2.4.0"
       ]
     },
     {
@@ -2010,7 +2075,7 @@
       "ref": "crypto/algorithm/csprng",
       "dependsOn": [
         "provider/node-crypto",
-        "@sovio-id/credo-openbao-kms@0.2.1|@noble/curves@2.4.0"
+        "@sovio-id/credo-openbao-kms@0.2.2|@noble/curves@2.4.0"
       ]
     },
     {
@@ -2036,7 +2101,7 @@
       "ref": "crypto/related-crypto-material/kv-secp256k1-key",
       "dependsOn": [
         "provider/openbao",
-        "@sovio-id/credo-openbao-kms@0.2.1|@noble/curves@2.4.0"
+        "@sovio-id/credo-openbao-kms@0.2.2|@noble/curves@2.4.0"
       ]
     },
     {
@@ -2059,7 +2124,7 @@
       "ref": "provider/node-crypto"
     },
     {
-      "ref": "@sovio-id/credo-openbao-kms@0.2.1|@noble/curves@2.4.0"
+      "ref": "@sovio-id/credo-openbao-kms@0.2.2|@noble/curves@2.4.0"
     }
   ],
   "externalReferences": [
@@ -2068,5 +2133,5 @@
       "url": "https://github.com/sovio-id/credo-openbao-kms"
     }
   ],
-  "serialNumber": "urn:uuid:af578d61-46f9-562c-948b-0f05797de369"
+  "serialNumber": "urn:uuid:d86045ec-0586-5d0d-8b09-eb6e42b618fb"
 }
