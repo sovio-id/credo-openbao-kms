@@ -1,0 +1,20 @@
+name: Publish to JSR
+
+# Secondary channel. Runs only when a GitHub release is published, and only
+# works after @sovio-id/credo-openbao-kms is linked to this repository in the
+# JSR package settings (OIDC, no token needed).
+on:
+  release:
+    types: [published]
+
+permissions:
+  contents: read
+  id-token: write # JSR OIDC authentication
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: oven-sh/setup-bun@v2
+      - run: npx jsr publish
