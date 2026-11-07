@@ -14,7 +14,7 @@ permissions:
 jobs:
   publish:
     runs-on: ubuntu-latest
-    environment: NPM_TOKEN
+    environment: Production
     steps:
       - uses: actions/checkout@v7
       # prepublishOnly runs `bun run build`.
