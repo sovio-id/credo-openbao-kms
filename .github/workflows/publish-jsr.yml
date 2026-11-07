@@ -30,7 +30,13 @@ jobs:
           else
             echo "exists=false" >> "$GITHUB_OUTPUT"
           fi
-      - uses: oven-sh/setup-bun@v2
+      - uses: actions/setup-node@v7
+        if: steps.jsr.outputs.exists != 'true'
+        with:
+          node-version: 22
+      # jsr publish type-checks against node_modules, so the npm dependencies
+      # (@credo-ts/core, @noble/curves) must be installed first.
+      - run: npm ci --ignore-scripts --no-audit --no-fund
         if: steps.jsr.outputs.exists != 'true'
       - run: npx jsr publish
         if: steps.jsr.outputs.exists != 'true'
