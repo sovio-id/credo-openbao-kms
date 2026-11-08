@@ -76,9 +76,10 @@ The most useful scripts:
    under the project license. See
    <https://developercertificate.org/>.
 4. Make sure `bun run ci` passes.
-5. Open a pull request against `main` and link the related issue. Describe the
+5. Add a changeset (see [Release notes and versioning](#release-notes-and-versioning)).
+6. Open a pull request against `main` and link the related issue. Describe the
    problem, the approach and any compatibility or security impact.
-6. Address review comments by pushing additional commits or amending your
+7. Address review comments by pushing additional commits or amending your
    branch. Keep the history readable.
 
 ## Commit messages
@@ -86,6 +87,36 @@ The most useful scripts:
 Use a short subject line, then a blank line and a body that explains why the
 change is needed and how it was implemented. Reference issues with
 `Resolves #<number>` where applicable.
+
+## Release notes and versioning
+
+Release notes are collected with [Changesets](https://github.com/changesets/changesets) while the work is done, instead of being reconstructed at release time. The package is `@sovio-id/credo-openbao-kms`; `package.json` and `jsr.json` always carry the same version.
+
+### When to add a changeset
+
+Add one to every pull request that changes what a consumer of the package gets: features, fixes, API changes, behaviour changes, and dependency updates that matter at runtime. Pull requests that only touch documentation, CI, demos, scripts or tests pass the **Changeset check** without one. A change that is neither and still needs no release note (a pure refactor, for example) takes an empty changeset: `npm run changeset -- --empty`.
+
+### How to add a changeset
+
+```bash
+npm run changeset
+```
+
+The prompt asks for the bump type and a summary. Write the summary for the people reading the release notes: what changed and what a consumer has to do about it. Commit the generated `.changeset/*.md` file with your pull request.
+
+While the package is below 1.0.0, a `minor` bump is also the right choice for a breaking change, and `major` is kept for the 1.0.0 release.
+
+| Bump | Use it for |
+| --- | --- |
+| `patch` | Bug fixes, documentation shipped in the package, internal changes with no visible effect |
+| `minor` | New features and backwards-compatible API additions; breaking changes while below 1.0.0 |
+| `major` | Breaking changes to the public API, the Transit key layout or the stored metadata once the package is 1.0.0 or later |
+
+### How a release is cut
+
+1. Changesets merged into `main` are collected by the **Version Packages** workflow into a pull request named `chore: version packages`. It bumps `package.json`, `package-lock.json` and `jsr.json` together and prepends the entries to `CHANGELOG.md`.
+2. A maintainer runs `npm run bom` on that pull request's branch and commits the refreshed `sbom/` files, as in earlier releases, because they record the package version. Then the maintainer reviews and merges the pull request.
+3. A maintainer creates a GitHub release with the tag `vX.Y.Z` on the merge commit, using the new `CHANGELOG.md` entry as the release notes. Publishing the release starts the existing **Publish to npm** workflow (with provenance, from the `Production` environment) and the **Publish to JSR** workflow. The Changesets workflows never publish, tag or create releases.
 
 ## License
 
